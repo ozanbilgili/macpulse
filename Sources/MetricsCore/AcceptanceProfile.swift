@@ -11,14 +11,14 @@ public struct AcceptanceProfile: Sendable {
         guard !matches.isEmpty else { return nil }
         guard matches.count == 1, let index = matches.first, arguments.indices.contains(index + 1),
               arguments[index + 1].hasPrefix("/"), !arguments[index + 1].hasPrefix("--") else {
-            throw HistoryError(description: "Geçersiz kabul profili; normal kullanıcı verisine geçilmedi.")
+            throw HistoryError(description: String(localized: "Invalid acceptance profile; normal user data was not opened."))
         }
         let url = URL(fileURLWithPath: arguments[index + 1], isDirectory: true).standardizedFileURL.resolvingSymlinksInPath()
         let home = FileManager.default.homeDirectoryForCurrentUser
         let live = home.appendingPathComponent("Library/Application Support/MacPulse", isDirectory: true)
         guard url.path != "/", url.path != home.path,
               url.path != live.path, !live.path.hasPrefix(url.path + "/"), !url.path.hasPrefix(live.path + "/") else {
-            throw HistoryError(description: "Kabul profili canlı veri dizininden ayrı olmalı.")
+            throw HistoryError(description: String(localized: "The acceptance profile must be separate from the live data folder."))
         }
         return AcceptanceProfile(directory: url)
     }
@@ -27,7 +27,7 @@ public struct AcceptanceProfile: Sendable {
         let identity = Data("MacPulse isolated acceptance profile v1\n".utf8)
         if FileManager.default.fileExists(atPath: directory.path) {
             guard (try? Data(contentsOf: marker)) == identity else {
-                throw HistoryError(description: "Kabul dizini uygulamaya ait değil; değiştirilmedi.")
+                throw HistoryError(description: String(localized: "The acceptance folder doesn't belong to the app; nothing was changed."))
             }
             return
         }

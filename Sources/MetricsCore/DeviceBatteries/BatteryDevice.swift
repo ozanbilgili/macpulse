@@ -7,7 +7,7 @@ public enum BatterySource: String, Codable, Sendable, CaseIterable {
 public enum BatteryTelemetry: String, Codable, Sendable {
     case iokit, macOSBluetooth, hidpp, mobileDevice, libimobiledevice, pencilStream
     public var label: String {
-        switch self { case .iokit: "IOKit"; case .macOSBluetooth: "macOS kaydı"; case .hidpp: "HID++"; case .mobileDevice: "MobileDevice"; case .libimobiledevice: "libimobiledevice"; case .pencilStream: "Pencil bildirimi" }
+        switch self { case .iokit: "IOKit"; case .macOSBluetooth: String(localized: "macOS record"); case .hidpp: "HID++"; case .mobileDevice: "MobileDevice"; case .libimobiledevice: "libimobiledevice"; case .pencilStream: String(localized: "Pencil notification") }
     }
 }
 

@@ -47,7 +47,8 @@ import Testing
             let path = try write(dir, "credit.json", #"{"data":{"total_credits":20,"total_usage":10.52839552}}"#)
             let credit = try #require(U.loadCredit(path: path))
             #expect(abs(credit.remaining - 9.47160448) < 1e-9 && credit.usedPct == 53)
-            #expect(U.formatUSD(credit.remaining) == "$9,47")
+            #expect(U.formatUSD(credit.remaining, locale: Locale(identifier: "tr_TR")) == "$9,47")
+            #expect(U.formatUSD(credit.remaining, locale: Locale(identifier: "en_US")) == "$9.47")
             let bad = try write(dir, "bad.json", #"{"data":{"total_credits":-1,"total_usage":4}}"#)
             #expect(U.loadCredit(path: bad) == nil)
             #expect(U.Credit(total: 5, used: 6.2, fetchedAt: now).remaining == 0)
@@ -82,7 +83,7 @@ import Testing
     @Test func resetTimeRoundsToNearestMinute() {
         let date = Date(timeIntervalSince1970: 1_800_000_059.57)
         #expect(U.roundedToMinute(date) == Date(timeIntervalSince1970: 1_800_000_060))
-        #expect(U.resetLabel(U.Window(pct: 0, resetsAt: nil), now: now, relative: false, notStarted: true) == "Başlamadı")
+        #expect(U.resetLabel(U.Window(pct: 0, resetsAt: nil), now: now, relative: false, notStarted: true) == "Not started")
     }
     @Test func manualRefreshCannotBypassExpiredCredentialsOrBackoff() {
         #expect(!U.canFetch(valid: false, cacheDate: nil, blockedUntil: nil, force: true, now: now))

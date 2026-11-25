@@ -15,7 +15,7 @@ private func inventoryRow() -> [String: Any] {
     let result = try ContainerAPI.inventory(data([inventoryRow()]))
     #expect(result.entries.count == 1 && !result.truncated)
     #expect(result.entries[0].name == "test" && result.entries[0].composeProject == "fixture")
-    #expect(result.entries[0].ports[0].label == "8080 → 80/tcp · IPv4 · yerel")
+    #expect(result.entries[0].ports[0].label == "8080 → 80/tcp · IPv4 · local")
     let encoded = String(decoding: try JSONEncoder().encode(result.entries), as: UTF8.self)
     #expect(!encoded.contains("sensitive") && !encoded.contains("SHOULD_NOT") && !encoded.contains("127.0.0.1"))
 }
@@ -33,7 +33,7 @@ private func inventoryRow() -> [String: Any] {
                     ["PrivatePort": 80, "PublicPort": 8080, "IP": "::"], ["PrivatePort": 81, "PublicPort": 8081]]
     let entries = try ContainerAPI.inventory(data([row])).entries
     #expect(entries[0].ports[0].family == "IPv4" && entries[0].ports[1].family == "IPv6")
-    #expect(entries[0].ports[2].scope == "arayüz bilinmiyor")
+    #expect(entries[0].ports[2].scope == "interface unknown")
     #expect(throws: (any Error).self) { try ContainerAPI.inventory(data([row, row])) }
 }
 @Test func HTTPParserVerifiesLengthStatusAndChunkFraming() throws {

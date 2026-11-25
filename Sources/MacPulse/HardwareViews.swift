@@ -19,58 +19,58 @@ struct HardwareView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
             HStack {
-                Label("GPU ve enerji", systemImage: "square.3.layers.3d").font(.system(size: 24, weight: .semibold, design: .rounded)).foregroundStyle(Palette.gpu)
+                Label("GPU & Energy", systemImage: "square.3.layers.3d").font(.system(size: 24, weight: .semibold, design: .rounded)).foregroundStyle(Palette.gpu)
                 Spacer()
-                Text("\(system.chip) · \(system.cores) çekirdek").font(.caption).foregroundStyle(Palette.secondary)
+                Text("\(system.chip) · \(system.cores) cores").font(.caption).foregroundStyle(Palette.secondary)
             }
             if let snapshot {
                 ForEach(snapshot.gpus) { gpu in
                     VStack(alignment: .leading, spacing: 16) {
                         HStack(alignment: .lastTextBaseline) {
-                            Text("GPU kullanımı").font(.headline)
+                            Text("GPU usage").font(.headline)
                             Spacer()
                             Text(MetricFormat.percent(gpu.devicePercent)).font(.system(size: 44, weight: .semibold, design: .rounded)).monospacedDigit().foregroundStyle(Palette.gpu)
                         }
-                        FactRow(facts: [StatFact(title: "Renderer", value: MetricFormat.percent(gpu.rendererPercent)), StatFact(title: "Tiler", value: MetricFormat.percent(gpu.tilerPercent)), StatFact(title: "Kullanılan sürücü belleği", value: MetricFormat.bytes(gpu.memoryInUse, binary: true)), StatFact(title: "Ayrılmış sürücü belleği", value: MetricFormat.bytes(gpu.memoryAllocated, binary: true))])
+                        FactRow(facts: [StatFact(title: "Renderer", value: MetricFormat.percent(gpu.rendererPercent)), StatFact(title: "Tiler", value: MetricFormat.percent(gpu.tilerPercent)), StatFact(title: String(localized: "Driver memory in use"), value: MetricFormat.bytes(gpu.memoryInUse, binary: true)), StatFact(title: String(localized: "Allocated driver memory"), value: MetricFormat.bytes(gpu.memoryAllocated, binary: true))])
                         MetricChart(points: plotPoints(history) { $0.hardware?.gpus.first { $0.id == gpu.id }?.devicePercent }, color: Palette.gpu, ceiling: 100, detailed: true).frame(height: 190)
-                        Text("AGX sürücüsünün kullanım sayaçlarıdır; sürücünün ölçüm penceresi bilinmez. Bellek değerleri GPU kaynaklarına ayrılan sistem belleğidir; ayrı VRAM veya fiziksel RAM toplamına eklenebilen değerler değildir.")
+                        Text("These are the AGX driver's utilization counters; the driver's sampling window is unknown. Memory values are system memory allocated to GPU resources, not separate VRAM, and can't be added to the physical RAM total.")
                             .font(.caption).foregroundStyle(Palette.secondary).fixedSize(horizontal: false, vertical: true)
                     }.padding(22).background(Palette.card, in: RoundedRectangle(cornerRadius: 18))
                 }
                 if snapshot.gpus.isEmpty { unavailable(snapshot.gpuStatus) }
-                Text("Güç ve sıcaklık").font(.title3.weight(.semibold))
+                Text("Power and temperature").font(.title3.weight(.semibold))
                 LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 14), count: 3), spacing: 14) {
-                    HardwareValue(title: "Sistem güç kanalı", value: HardwareFormat.watts(snapshot.systemWatts), caption: "SMC PSTR · bildirilen değer", color: Palette.accent)
-                    HardwareValue(title: "GPU enerji modeli", value: HardwareFormat.watts(snapshot.gpuModelWatts), caption: "IOReport · aralık ortalaması", color: Palette.gpu)
-                    HardwareValue(title: "Pil net akışı", value: HardwareFormat.flow(snapshot.batteryNetWatts), caption: "↑ pile giriş · ↓ pilden çıkış", color: Palette.battery)
-                    HardwareValue(title: "CPU sensörleri · kısmi", value: HardwareFormat.temperature(snapshot.cpuTemperatureAverage), caption: "Yalnız doğrulanan sensör grubu", color: Palette.cpu)
-                    HardwareValue(title: "GPU sensör ortalaması", value: HardwareFormat.temperature(snapshot.gpuTemperatureAverage), caption: "Yalnız geçerli Tg sensörleri", color: Palette.gpu)
-                    HardwareValue(title: "macOS termal durumu", value: system.thermalState, caption: "İşletim sistemi · derece değildir", color: Palette.disk)
+                    HardwareValue(title: "System power channel", value: HardwareFormat.watts(snapshot.systemWatts), caption: "SMC PSTR · reported value", color: Palette.accent)
+                    HardwareValue(title: "GPU energy model", value: HardwareFormat.watts(snapshot.gpuModelWatts), caption: "IOReport · interval average", color: Palette.gpu)
+                    HardwareValue(title: "Net battery flow", value: HardwareFormat.flow(snapshot.batteryNetWatts), caption: "↑ into battery · ↓ out of battery", color: Palette.battery)
+                    HardwareValue(title: "CPU sensors · partial", value: HardwareFormat.temperature(snapshot.cpuTemperatureAverage), caption: "Verified sensor group only", color: Palette.cpu)
+                    HardwareValue(title: "GPU sensor average", value: HardwareFormat.temperature(snapshot.gpuTemperatureAverage), caption: "Valid Tg sensors only", color: Palette.gpu)
+                    HardwareValue(title: "macOS thermal state", value: system.thermalState, caption: "Operating system · not degrees", color: Palette.disk)
                 }
                 VStack(alignment: .leading, spacing: 8) {
                     Label(snapshot.energyStatus, systemImage: "info.circle")
-                    Text("GPU watt değeri enerji modelinden hesaplanır; donanım güç ölçeri değildir. Sistem güç kanalı ve pil akışı farklı kapsamdadır; birbirine eklenmez ve prizden çekilen güç olarak sunulmaz. CPU/ANE watt ve uygulama başına enerji bu sürümde ölçülmez.")
-                    Text(snapshot.batteryFlowStatus + (snapshot.batteryUpdatedAt.map { " · Kaynak güncellemesi " + $0.formatted(date: .omitted, time: .standard) } ?? ""))
+                    Text("GPU wattage is calculated from an energy model; it isn't a hardware power meter. The system power channel and battery flow have different scopes; they aren't added together or presented as power drawn from the outlet. CPU/ANE wattage and per-app energy aren't measured in this version.")
+                    Text(snapshot.batteryFlowStatus + (snapshot.batteryUpdatedAt.map { " · " + String(localized: "Source updated \($0.formatted(date: .omitted, time: .standard))") } ?? ""))
                 }.font(.caption).foregroundStyle(Palette.secondary).fixedSize(horizontal: false, vertical: true)
                 HStack(alignment: .top, spacing: 14) {
-                    HardwarePlot(title: "GPU enerji modeli · W", points: plotPoints(history) { $0.hardware?.gpuModelWatts }, color: Palette.gpu)
-                    HardwarePlot(title: "Sistem güç kanalı · W", points: plotPoints(history) { $0.hardware?.systemWatts }, color: Palette.accent)
+                    HardwarePlot(title: "GPU energy model · W", points: plotPoints(history) { $0.hardware?.gpuModelWatts }, color: Palette.gpu)
+                    HardwarePlot(title: "System power channel · W", points: plotPoints(history) { $0.hardware?.systemWatts }, color: Palette.accent)
                 }
                 HStack {
-                    Text("Sensör okumaları").font(.title3.weight(.semibold))
+                    Text("Sensor readings").font(.title3.weight(.semibold))
                     Spacer()
-                    Text("\(snapshot.sensors.count) geçerli · \(snapshot.invalidSensors) geçersiz · \(snapshot.sensorFailures) okunamadı").font(.caption).foregroundStyle(Palette.secondary)
+                    Text("\(snapshot.sensors.count) valid · \(snapshot.invalidSensors) invalid · \(snapshot.sensorFailures) unreadable").font(.caption).foregroundStyle(Palette.secondary)
                 }
-                Text(snapshot.sensorStatus + (snapshot.sensorsTruncated ? " · Liste kısmi" : "") + " · " + snapshot.date.formatted(date: .omitted, time: .standard))
+                Text(snapshot.sensorStatus + (snapshot.sensorsTruncated ? " · " + String(localized: "Partial list") : "") + " · " + snapshot.date.formatted(date: .omitted, time: .standard))
                     .font(.caption).foregroundStyle(Palette.secondary)
-                if snapshot.sensors.isEmpty { unavailable("Sensör verisi doğrulanamıyor; fan hızı ve sıcaklık sıfır kabul edilmez.") }
+                if snapshot.sensors.isEmpty { unavailable(String(localized: "Sensor data can't be verified; fan speed and temperature aren't assumed to be zero.")) }
                 else {
                     VStack(spacing: 0) {
                         ForEach(snapshot.sensors) { sensor in
                             HStack {
                                 Image(systemName: sensor.kind == .fan ? "fan" : sensor.kind == .systemPower ? "bolt" : "thermometer.medium").frame(width: 24).foregroundStyle(sensor.kind == .gpu ? Palette.gpu : Palette.secondary)
                                 Text(sensor.id).font(.system(.body, design: .monospaced)).frame(width: 70, alignment: .leading)
-                                Text(sensor.kind == .fan ? "Fan · gerçek devir" : sensor.kind == .systemPower ? "Sistem güç kanalı" : sensor.kind == .gpu ? "GPU sensör grubu" : "CPU sensör grubu").foregroundStyle(Palette.secondary)
+                                Text(sensor.kind == .fan ? "Fan · actual RPM" : sensor.kind == .systemPower ? "System power channel" : sensor.kind == .gpu ? "GPU sensor group" : "CPU sensor group").foregroundStyle(Palette.secondary)
                                 Spacer()
                                 Text(sensor.kind == .fan ? MetricFormat.number(sensor.value, digits: 0) + " rpm" : sensor.kind == .systemPower ? HardwareFormat.watts(sensor.value) : HardwareFormat.temperature(sensor.value)).monospacedDigit()
                             }.font(.system(size: 12)).padding(12)
@@ -78,11 +78,11 @@ struct HardwareView: View {
                         }
                     }.background(Palette.card, in: RoundedRectangle(cornerRadius: 14))
                 }
-                Text("SMC sensör adları ve eşlemeleri belgelenmemiştir; ortalama yalnız bu cihazda geçerli okunan grubu kapsar, tüm çekirdeklerin kesin sıcaklığı değildir. macOS 27+ üzerinde doğrulanamayan Tp grubu dışarıda kalır; CPU sıcaklığı kısmi Te grubudur. Sıcaklık iki geçerli ardışık okumadan sonra görünür. Eksik/geçersiz veri ortalamaya girmez. Fanlar yalnız okunur. GPU/SMC/IOReport erişimi cihaz veya macOS sürümüyle değişebilir; yetkili yardımcı kurulmaz.")
+                Text("SMC sensor names and mappings aren't documented; the average covers only the group read validly on this device and isn't the exact temperature of every core. The Tp group, which can't be verified on macOS 27+, is excluded; CPU temperature is the partial Te group. Temperature appears after two valid consecutive readings. Missing or invalid data isn't averaged. Fans are read only. GPU/SMC/IOReport access can vary by device or macOS version; no privileged helper is installed.")
                     .font(.caption).foregroundStyle(Palette.secondary).fixedSize(horizontal: false, vertical: true)
-                Text("Ayrıntılı sensör listesi yalnız canlı bellektedir. Grafikler son 90 donanım örneğini kapsar; 30 günlük kayıt bu metriklerle genişletilmedi.")
+                Text("The detailed sensor list lives only in memory. Charts cover the last 90 hardware samples; the 30-day history isn't extended with these metrics.")
                     .font(.caption).foregroundStyle(Palette.secondary)
-            } else { unavailable("Donanım ölçümleri bekleniyor") }
+            } else { unavailable(String(localized: "Waiting for hardware measurements")) }
         }
     }
     private func unavailable(_ text: String) -> some View {
@@ -91,7 +91,9 @@ struct HardwareView: View {
     }
 }
 private struct HardwareValue: View {
-    let title, value, caption: String
+    let title: LocalizedStringKey
+    let value: String
+    let caption: LocalizedStringKey
     let color: Color
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -102,7 +104,7 @@ private struct HardwareValue: View {
     }
 }
 private struct HardwarePlot: View {
-    let title: String
+    let title: LocalizedStringKey
     let points: [PlotPoint]
     let color: Color
     var body: some View {

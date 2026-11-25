@@ -37,7 +37,7 @@ public struct RawProcessReading: Sendable {
 public enum Attribution: String, Sendable, Codable {
     case bundle, parent, coalition, independent
     public var label: String {
-        switch self { case .bundle: "Uygulama paketi"; case .parent: "Ebeveyn süreci"; case .coalition: "macOS uygulama grubu"; case .independent: "Bağımsız süreç" }
+        switch self { case .bundle: String(localized: "App bundle"); case .parent: String(localized: "Parent process"); case .coalition: String(localized: "macOS app group"); case .independent: String(localized: "Standalone process") }
     }
 }
 
@@ -95,8 +95,9 @@ public struct ProcessSnapshot: Sendable, Codable {
 }
 
 public enum ProcessSort: String, Sendable, CaseIterable, Identifiable {
-    case cpu = "CPU", memory = "Bellek", name = "Ad"
+    case cpu, memory, name
     public var id: Self { self }
+    public var label: String { switch self { case .cpu: "CPU"; case .memory: String(localized: "Memory"); case .name: String(localized: "Name") } }
     public func sorted(_ groups: [ApplicationUsage]) -> [ApplicationUsage] {
         groups.sorted { left, right in
             switch self {

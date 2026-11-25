@@ -89,11 +89,11 @@ import MetricsCore
     var message: String {
         if let error { return error }
         switch status {
-        case .enabled: return "Bu uygulama giriş yaptığında açılacak."
-        case .requiresApproval: return "macOS onayı bekleniyor. Giriş öğelerini açıp MacPulse'a izin ver."
-        case .notRegistered: return "Kapalı. Açılışta kendiliğinden kayıt yapılmaz."
-        case .notFound: return "Giriş öğesi bulunamadı. Uygulamayı Uygulamalar klasöründen çalıştırıp etkinleştirmeyi dene."
-        @unknown default: return "Giriş öğesi durumu okunamıyor."
+        case .enabled: return String(localized: "This app will open when you log in.")
+        case .requiresApproval: return String(localized: "Waiting for macOS approval. Open Login Items and allow MacPulse.")
+        case .notRegistered: return String(localized: "Off. Nothing is registered automatically at launch.")
+        case .notFound: return String(localized: "Login item not found. Run the app from the Applications folder and try enabling it.")
+        @unknown default: return String(localized: "Login item status can't be read.")
         }
     }
     func refresh() { status = SMAppService.mainApp.status }
@@ -104,7 +104,7 @@ import MetricsCore
             if enabled { try SMAppService.mainApp.register() }
             else { try SMAppService.mainApp.unregister() }
         } catch {
-            self.error = "Giriş öğesi değiştirilemedi. Uygulamayı Uygulamalar klasöründen çalıştırıp tekrar dene."
+            self.error = String(localized: "Login item couldn't be changed. Run the app from the Applications folder and try again.")
         }
         refresh()
     }
@@ -115,51 +115,51 @@ struct PreferencesView: View {
     @Bindable var preferences: PreferencesStore
     @Environment(\.openWindow) private var openWindow
     @State private var login = LoginItemController()
-    private var version: String { Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "Geliştirme" }
+    private var version: String { Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? String(localized: "Development") }
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
             HStack(spacing: 10) {
                 Image(systemName: "slider.horizontal.3").foregroundStyle(Palette.accent).font(.title2)
                 VStack(alignment: .leading, spacing: 3) {
-                    Text("MacPulse tercihleri").font(.title2.weight(.semibold))
-                    Text("Görünüm, ölçüm sıklığı ve menü çubuğu").font(.caption).foregroundStyle(Palette.secondary)
+                    Text("MacPulse Settings").font(.title2.weight(.semibold))
+                    Text("Appearance, sampling rate and menu bar").font(.caption).foregroundStyle(Palette.secondary)
                 }
             }
             GroupBox {
                 VStack(alignment: .leading, spacing: 16) {
-                    Picker("Tema", selection: $preferences.theme) {
+                    Picker("Theme", selection: $preferences.theme) {
                         ForEach(MonitorTheme.allCases, id: \.self) { Text($0.label).tag($0) }
                     }.pickerStyle(.segmented)
-                    Picker("Görünürken yenileme", selection: $preferences.interval) {
-                        ForEach(MonitorPreferences.intervals, id: \.self) { Text("\($0) saniye").tag($0) }
+                    Picker("Refresh while visible", selection: $preferences.interval) {
+                        ForEach(MonitorPreferences.intervals, id: \.self) { Text("\($0) seconds").tag($0) }
                     }
-                    Text("Ana pencere veya hızlı panel görünürken bu aralık kullanılır. Arka planda 10 saniyede bir ölçülür.")
+                    Text("This interval is used while the main window or quick panel is visible. In the background, sampling happens every 10 seconds.")
                         .font(.caption).foregroundStyle(Palette.secondary).fixedSize(horizontal: false, vertical: true)
                 }.padding(10)
             }
-            GroupBox("Menü çubuğu widget'ları") {
+            GroupBox("Menu Bar Widgets") {
                 VStack(alignment: .leading, spacing: 9) {
-                    Text("Sistem verilerini ve AI hesaplarını ayrı ayrı seç, sırala ve gösterimlerini düzenle.")
+                    Text("Choose, order and style system data and AI accounts separately.")
                         .font(.caption).foregroundStyle(Palette.secondary).fixedSize(horizontal: false, vertical: true)
-                    Button("Menü çubuğunu düzenle") { openWindow(id: "menu-widgets") }
+                    Button("Edit menu bar") { openWindow(id: "menu-widgets") }
                 }.padding(10).frame(maxWidth: .infinity, alignment: .leading)
             }
             GroupBox {
                 VStack(alignment: .leading, spacing: 9) {
-                    Toggle("Giriş yaptığımda MacPulse'u aç", isOn: Binding(get: { login.requested }, set: { login.setEnabled($0) }))
+                    Toggle("Open MacPulse when I log in", isOn: Binding(get: { login.requested }, set: { login.setEnabled($0) }))
                         .disabled(preferences.acceptance != nil)
                     Text(login.message).font(.caption).foregroundStyle(login.error == nil ? Palette.secondary : Palette.disk)
                         .fixedSize(horizontal: false, vertical: true)
                     if login.status == .requiresApproval {
-                        Button("Giriş öğelerini aç") { login.openSystemSettings() }
+                        Button("Open Login Items") { login.openSystemSettings() }
                     }
                 }.padding(10).frame(maxWidth: .infinity, alignment: .leading)
             }
             HStack {
-                Button("MacPulse \(version) Hakkında") { openWindow(id: "about") }
+                Button("About MacPulse \(version)") { openWindow(id: "about") }
                     .buttonStyle(.link)
                 Spacer()
-                Text("Tercihler bu Mac'te saklanır")
+                Text("Settings are stored on this Mac")
             }.font(.caption).foregroundStyle(Palette.secondary)
         }.padding(24).frame(width: 490).background(Palette.background).foregroundStyle(.primary)
             .onAppear { login.refresh() }

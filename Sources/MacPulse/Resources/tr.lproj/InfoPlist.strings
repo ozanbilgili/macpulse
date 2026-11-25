@@ -1,0 +1,5 @@
+/* Bluetooth izin istemi */
+"NSBluetoothAlwaysUsageDescription" = "Bağlı aksesuarların pil durumu yerel olarak gösterilir.";
+
+/* Yerel ağ izin istemi */
+"NSLocalNetworkUsageDescription" = "Bu Mac ile önceden eşleşmiş iPhone ve iPad pilleri yerel ağdan okunur.";

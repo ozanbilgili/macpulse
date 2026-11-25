@@ -59,7 +59,7 @@ public enum ProcessGrouping {
                 attribution: attribution?.1 ?? .independent))
         }
         let groups = members.map { key, rows in
-            ApplicationUsage(id: key, name: names[key] ?? "Süreç", kind: descriptors[key] == nil ? .independent : .application,
+            ApplicationUsage(id: key, name: names[key] ?? String(localized: "Process"), kind: descriptors[key] == nil ? .independent : .application,
                 bundleIdentifier: descriptors[key]?.bundleIdentifier, bundlePath: descriptors[key]?.bundlePath,
                 processes: rows.sorted { $0.identity.pid < $1.identity.pid })
         }

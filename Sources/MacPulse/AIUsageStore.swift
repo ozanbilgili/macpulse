@@ -29,7 +29,7 @@ import MetricsCore
         }.count
     }
     var claudeCount: Int { states.filter { $0.account.provider == .claude }.count }
-    var summary: String { "Claude \(availableClaude)/\(claudeCount) kullanılabilir" }
+    var summary: String { String(localized: "Claude \(availableClaude)/\(claudeCount) available") }
 
     func tick() {
         now = Date()

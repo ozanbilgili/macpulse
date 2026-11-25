@@ -11,24 +11,25 @@ struct BluetoothView: View {
                 HStack {
                     Label("Bluetooth", systemImage: "antenna.radiowaves.left.and.right").font(.title2.weight(.semibold)).foregroundStyle(Palette.memory)
                     Spacer()
-                    Toggle("Yalnız bağlı", isOn: $onlyConnected).toggleStyle(.switch).font(.caption)
+                    Toggle("Connected only", isOn: $onlyConnected).toggleStyle(.switch).font(.caption)
                 }
                 if let snapshot {
                     let fresh = snapshot.fresh(at: context.date)
+                    let time = snapshot.date.formatted(date: .omitted, time: .standard)
                     let connected = snapshot.accessories.filter { snapshot.connection($0, at: context.date) == .connected }
                     HStack(spacing: 14) {
-                        AccessoryFact(title: "Bluetooth durumu", value: fresh && snapshot.available ? power(snapshot.power) : "Bilinmiyor", caption: "macOS envanter bildirimi", color: Palette.memory)
-                        AccessoryFact(title: "Bağlı aksesuar", value: fresh && snapshot.available ? "\(connected.count)" : "—", caption: "Bağlantı taraması", color: Palette.accent)
-                        AccessoryFact(title: "Envanter", value: snapshot.available ? "\(snapshot.accessories.count)" : "—", caption: snapshot.truncated ? "Liste kısmi" : "Bağlı ve eşlenmiş cihazlar", color: Palette.secondary)
+                        AccessoryFact(title: "Bluetooth status", value: fresh && snapshot.available ? power(snapshot.power) : String(localized: "Unknown"), caption: "macOS inventory report", color: Palette.memory)
+                        AccessoryFact(title: "Connected accessories", value: fresh && snapshot.available ? "\(connected.count)" : "—", caption: "Connection scan", color: Palette.accent)
+                        AccessoryFact(title: "Inventory", value: snapshot.available ? "\(snapshot.accessories.count)" : "—", caption: snapshot.truncated ? "Partial list" : "Connected and paired devices", color: Palette.secondary)
                     }
                     HStack {
                         Text(snapshot.status).font(.caption)
                         Spacer()
-                        Text((paused ? "Duraklatıldı · " : fresh ? "Son sorgu · " : "Sorgu eskidi · ") + snapshot.date.formatted(date: .omitted, time: .standard)).font(.caption).monospacedDigit()
+                        Text(paused ? "Paused · \(time)" : fresh ? "Last query · \(time)" : "Query is stale · \(time)").font(.caption).monospacedDigit()
                     }.foregroundStyle(Palette.secondary)
                     let rows = onlyConnected ? connected : snapshot.accessories
                     if rows.isEmpty {
-                        Text(snapshot.available ? onlyConnected ? "Bağlı aksesuar yok." : "Bluetooth envanterinde aksesuar yok." : "Bluetooth verisi alınamadı. Sonuç bilinmeyen; eski envanter canlı gösterilmez.")
+                        Text(snapshot.available ? onlyConnected ? "No connected accessories." : "No accessories in the Bluetooth inventory." : "Bluetooth data unavailable. The result is unknown; an old inventory isn't shown as live.")
                             .foregroundStyle(Palette.secondary).padding(22).frame(maxWidth: .infinity, alignment: .leading).background(Palette.card, in: RoundedRectangle(cornerRadius: 16))
                     }
                     ForEach(rows) { device in
@@ -39,35 +40,35 @@ struct BluetoothView: View {
                                 Image(systemName: icon(device.kind)).font(.title2).foregroundStyle(Palette.memory).frame(width: 34)
                                 VStack(alignment: .leading, spacing: 4) { Text(device.name).font(.headline); Text(device.kind).font(.caption).foregroundStyle(Palette.secondary) }
                                 Spacer()
-                                Text(state == .connected ? "Bağlı" : state == .disconnected ? "Bağlı değil" : "Durum bilinmiyor")
+                                Text(state == .connected ? "Connected" : state == .disconnected ? "Not connected" : "Status unknown")
                                     .font(.caption.weight(.medium)).foregroundStyle(state == .connected ? Palette.accent : Palette.secondary)
                                     .padding(.horizontal, 10).padding(.vertical, 6).background(Palette.elevated, in: Capsule())
                             }
                             if batteries.isEmpty {
-                                HStack { Text("Pil").foregroundStyle(Palette.secondary); Spacer(); Text("—").font(.title3).monospacedDigit() }
-                                Text(paused ? "İzleme duraklatıldı." : state == .disconnected ? "Bağlantısız cihazın saklanan pil değeri gösterilmez." : state == .unknown ? "Güncel bağlantı doğrulanamıyor." : device.batteryLimitation ?? "Bu aksesuar için pil bildirimi yok.")
+                                HStack { Text("Battery").foregroundStyle(Palette.secondary); Spacer(); Text("—").font(.title3).monospacedDigit() }
+                                Text(paused ? String(localized: "Monitoring paused.") : state == .disconnected ? String(localized: "Stored battery values aren't shown for disconnected devices.") : state == .unknown ? String(localized: "Current connection can't be verified.") : device.batteryLimitation ?? String(localized: "This accessory doesn't report its battery."))
                                     .font(.caption).foregroundStyle(Palette.secondary)
                             } else {
                                 HStack(spacing: 22) {
                                     ForEach(batteries, id: \.component) { battery in
                                         VStack(alignment: .leading, spacing: 5) {
-                                            Text(battery.component).font(.caption).foregroundStyle(Palette.secondary)
-                                            Text("\(battery.percent)%").font(.system(size: 26, weight: .semibold, design: .rounded)).monospacedDigit().foregroundStyle(Palette.battery)
+                                            Text(battery.label).font(.caption).foregroundStyle(Palette.secondary)
+                                            Text(LocalizedFormat.percent(battery.percent)).font(.system(size: 26, weight: .semibold, design: .rounded)).monospacedDigit().foregroundStyle(Palette.battery)
                                         }
                                     }
                                 }
-                                Text("Bildirilen pil · macOS kaydı · sensör güncelleme zamanı bilinmiyor")
+                                Text("Reported battery · macOS record · sensor update time unknown")
                                     .font(.caption).foregroundStyle(Palette.secondary)
                             }
                         }.padding(20).background(Palette.card, in: RoundedRectangle(cornerRadius: 16))
                     }
-                    Text("Pil yüzdeleri macOS'un bildirdiği kayıtlardır; bu sorgunun zamanı sensör ölçüm zamanı değildir. Bağlantısız, 45 saniyeden eski veya duraklatılmış kayıtta pil gizlenir. Logitech'in genel pil kaydı güvenilir kabul edilmez; bu sürüm HID++ sorgulamaz. Yeni cihaz tarama, eşleme, bağlanma veya bağlantı kesme yapılmaz. iPhone/iPad, Watch ve Pencil için ayrı canlı pil kaynağı eklenmedi.")
+                    Text("Battery percentages are records reported by macOS; the time of this query is not the sensor's measurement time. Batteries are hidden for disconnected devices, records older than 45 seconds, and while paused. Logitech's generic battery record isn't trusted; this version doesn't query HID++. No scanning, pairing, connecting or disconnecting is done. No separate live battery source is added for iPhone/iPad, Watch or Pencil.")
                         .font(.caption).foregroundStyle(Palette.secondary).fixedSize(horizontal: false, vertical: true)
-                } else { ProgressView("Bluetooth envanteri bekleniyor") }
+                } else { ProgressView("Waiting for Bluetooth inventory") }
             }
         }
     }
-    private func power(_ value: BluetoothPower) -> String { value == .on ? "Açık" : value == .off ? "Kapalı" : "Bilinmiyor" }
+    private func power(_ value: BluetoothPower) -> String { value == .on ? String(localized: "On") : value == .off ? String(localized: "Off") : String(localized: "Unknown") }
     private func icon(_ kind: String) -> String {
         let name = kind.lowercased()
         if name.contains("keyboard") { return "keyboard" }
@@ -79,61 +80,64 @@ struct BluetoothView: View {
 
 struct AudioDevicesView: View {
     let snapshot: AudioSnapshot?
-    @State private var filter = "Tümü"
+    private enum Direction: Hashable { case all, input, output }
+    @State private var filter = Direction.all
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
             HStack {
-                Label("Ses cihazları", systemImage: "speaker.wave.2").font(.title2.weight(.semibold)).foregroundStyle(Palette.network)
+                Label("Audio devices", systemImage: "speaker.wave.2").font(.title2.weight(.semibold)).foregroundStyle(Palette.network)
                 Spacer()
-                Picker("Cihaz yönü", selection: $filter) { ForEach(["Tümü", "Giriş", "Çıkış"], id: \.self) { Text($0) } }.pickerStyle(.segmented).frame(width: 230)
+                Picker("Device direction", selection: $filter) { Text("All").tag(Direction.all); Text("Input").tag(Direction.input); Text("Output").tag(Direction.output) }.pickerStyle(.segmented).frame(width: 230)
             }
             if let snapshot {
                 HStack(spacing: 14) {
-                    AccessoryFact(title: "Varsayılan giriş", value: snapshot.input?.name ?? "—", caption: "Mikrofon / giriş aygıtı", color: Palette.network)
-                    AccessoryFact(title: "Varsayılan çıkış", value: snapshot.output?.name ?? "—", caption: "Uygulama sesleri", color: Palette.accent)
-                    AccessoryFact(title: "Sistem sesleri", value: snapshot.systemOutput?.name ?? "—", caption: "Uyarı seslerinin çıkışı", color: Palette.secondary)
+                    AccessoryFact(title: "Default input", value: snapshot.input?.name ?? "—", caption: "Microphone / input device", color: Palette.network)
+                    AccessoryFact(title: "Default output", value: snapshot.output?.name ?? "—", caption: "App sounds", color: Palette.accent)
+                    AccessoryFact(title: "System sounds", value: snapshot.systemOutput?.name ?? "—", caption: "Alert sound output", color: Palette.secondary)
                 }
                 HStack {
-                    Text(snapshot.available ? "\(snapshot.devices.count) cihaz · \(snapshot.failures) eksik / değişen alan" + (snapshot.truncated ? " · Liste kısmi" : "") : "Core Audio envanteri alınamadı").font(.caption)
+                    Text(!snapshot.available ? String(localized: "Core Audio inventory unavailable") : String(localized: "\(snapshot.devices.count) devices · \(snapshot.failures) missing / changed fields") + (snapshot.truncated ? " · " + String(localized: "Partial list") : "")).font(.caption)
                     Spacer()
-                    Text("Son sorgu " + snapshot.date.formatted(date: .omitted, time: .standard)).font(.caption).monospacedDigit()
+                    Text("Last query \(snapshot.date.formatted(date: .omitted, time: .standard))").font(.caption).monospacedDigit()
                 }.foregroundStyle(Palette.secondary)
-                let devices = snapshot.devices.filter { filter == "Tümü" || (filter == "Giriş" ? ($0.inputChannels ?? 0) > 0 : ($0.outputChannels ?? 0) > 0) }
-                if devices.isEmpty { Text("Bu kapsamda ses cihazı yok.").foregroundStyle(Palette.secondary).padding(22) }
+                let devices = snapshot.devices.filter { filter == .all || (filter == .input ? ($0.inputChannels ?? 0) > 0 : ($0.outputChannels ?? 0) > 0) }
+                if devices.isEmpty { Text("No audio devices in this scope.").foregroundStyle(Palette.secondary).padding(22) }
                 ForEach(devices) { device in
                     VStack(alignment: .leading, spacing: 16) {
                         HStack {
                             Image(systemName: (device.outputChannels ?? 0) > 0 ? "speaker.wave.2" : "mic").font(.title2).foregroundStyle(Palette.network).frame(width: 32)
                             VStack(alignment: .leading, spacing: 5) {
                                 Text(device.name).font(.headline)
-                                Text(device.transport + " · " + (device.sampleRate.map { MetricFormat.number($0 / 1000, digits: 1) + " kHz" } ?? "Örnekleme hızı bilinmiyor")).font(.caption).foregroundStyle(Palette.secondary)
+                                Text(device.transport + " · " + (device.sampleRate.map { MetricFormat.number($0 / 1000, digits: 1) + " kHz" } ?? String(localized: "Sample rate unknown"))).font(.caption).foregroundStyle(Palette.secondary)
                             }
                             Spacer()
-                            if device.id == snapshot.defaultInput { badge("Varsayılan giriş") }
-                            if device.id == snapshot.defaultOutput { badge("Varsayılan çıkış") }
+                            if device.id == snapshot.defaultInput { badge("Default input") }
+                            if device.id == snapshot.defaultOutput { badge("Default output") }
                         }
-                        FactRow(facts: [StatFact(title: "Giriş kanalı", value: device.inputChannels.map(String.init) ?? "—"),
-                            StatFact(title: "Çıkış kanalı", value: device.outputChannels.map(String.init) ?? "—"),
-                            StatFact(title: "Giriş seviyesi", value: device.inputVolume.map { MetricFormat.percent($0) } ?? "—"),
-                            StatFact(title: "Çıkış seviyesi", value: device.outputVolume.map { MetricFormat.percent($0) } ?? "—")])
+                        FactRow(facts: [StatFact(title: String(localized: "Input channels"), value: device.inputChannels.map(String.init) ?? "—"),
+                            StatFact(title: String(localized: "Output channels"), value: device.outputChannels.map(String.init) ?? "—"),
+                            StatFact(title: String(localized: "Input level"), value: device.inputVolume.map { MetricFormat.percent($0) } ?? "—"),
+                            StatFact(title: String(localized: "Output level"), value: device.outputVolume.map { MetricFormat.percent($0) } ?? "—")])
                         HStack(spacing: 22) {
-                            Text("Giriş sessiz: " + flag(device.inputMuted))
-                            Text("Çıkış sessiz: " + flag(device.outputMuted))
+                            Text("Input muted: \(flag(device.inputMuted))")
+                            Text("Output muted: \(flag(device.outputMuted))")
                             Spacer()
-                            Text(device.running.map { $0 ? "Cihaz I/O çalışıyor" : "Cihaz I/O boşta" } ?? "I/O durumu bilinmiyor")
+                            Text(device.running.map { $0 ? String(localized: "Device I/O running") : String(localized: "Device I/O idle") } ?? String(localized: "I/O status unknown"))
                         }.font(.caption).foregroundStyle(Palette.secondary)
                     }.padding(20).background(Palette.card, in: RoundedRectangle(cornerRadius: 16))
                 }
-                Text("Cihazlar Core Audio üzerinden salt okunur sorgulanır. Seviyeler sürücünün ana kanal kontrolüdür; kontrol yoksa — görünür. I/O çalışması duyulabilir ses veya belirli bir uygulamanın ses çıkarması anlamına gelmez. Mikrofon/sistem sesi kaydı, ses örneği, cihaz değiştirme, ses seviyesi ayarı ve uygulama başına karıştırıcı bu sürümde yoktur. Envanter yalnız güncel bellekte tutulur.")
+                Text("Devices are queried read-only through Core Audio. Levels are the driver's main channel control; — appears when there is none. Running I/O doesn't mean audible sound or that a specific app is playing audio. Microphone or system audio recording, audio samples, device switching, volume control and a per-app mixer are not part of this version. The inventory is kept in memory only.")
                     .font(.caption).foregroundStyle(Palette.secondary).fixedSize(horizontal: false, vertical: true)
-            } else { ProgressView("Ses cihazları bekleniyor") }
+            } else { ProgressView("Waiting for audio devices") }
         }
     }
-    private func flag(_ value: Bool?) -> String { value.map { $0 ? "Evet" : "Hayır" } ?? "—" }
-    private func badge(_ text: String) -> some View { Text(text).font(.caption2.weight(.medium)).foregroundStyle(Palette.accent).padding(7).background(Palette.elevated, in: Capsule()) }
+    private func flag(_ value: Bool?) -> String { value.map { $0 ? String(localized: "Yes") : String(localized: "No") } ?? "—" }
+    private func badge(_ text: LocalizedStringKey) -> some View { Text(text).font(.caption2.weight(.medium)).foregroundStyle(Palette.accent).padding(7).background(Palette.elevated, in: Capsule()) }
 }
 private struct AccessoryFact: View {
-    let title, value, caption: String
+    let title: LocalizedStringKey
+    let value: String
+    let caption: LocalizedStringKey
     let color: Color
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {

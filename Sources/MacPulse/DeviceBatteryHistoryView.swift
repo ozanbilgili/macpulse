@@ -15,29 +15,29 @@ struct DeviceBatteryHistoryView: View {
         VStack(alignment: .leading, spacing: 16) {
             header
             HStack(spacing: 0) {
-                HistoryMetric(title: "Değişim", value: chart.change.map { ($0 > 0 ? "+" : "") + "\($0) puan" } ?? "—",
-                              detail: "İlk ve son ölçüm", symbol: chart.change.map { $0 > 0 ? "arrow.up.right" : ($0 < 0 ? "arrow.down.right" : "arrow.right") } ?? "minus")
+                HistoryMetric(title: "Change", value: chart.change.map { change in String(localized: "\((change > 0 ? "+" : "") + String(change)) pts") } ?? "—",
+                              detail: String(localized: "First and last reading"), symbol: chart.change.map { $0 > 0 ? "arrow.up.right" : ($0 < 0 ? "arrow.down.right" : "arrow.right") } ?? "minus")
                 Divider().frame(height: 34).padding(.horizontal, 18)
-                HistoryMetric(title: "Pil aralığı", value: chart.measuredRange.map { $0.lowerBound == $0.upperBound ? "%\($0.lowerBound)" : "%\($0.lowerBound)–\($0.upperBound)" } ?? "—",
-                              detail: "En düşük · en yüksek", symbol: "battery.75percent")
+                HistoryMetric(title: "Battery range", value: chart.measuredRange.map { $0.lowerBound == $0.upperBound ? LocalizedFormat.percent($0.lowerBound) : LocalizedFormat.percent($0.lowerBound) + "–" + LocalizedFormat.percent($0.upperBound) } ?? "—",
+                              detail: String(localized: "Lowest · highest"), symbol: "battery.75percent")
                 Divider().frame(height: 34).padding(.horizontal, 18)
-                HistoryMetric(title: "Ölçümler", value: "\(chart.points.count)", detail: measurementSpan(chart), symbol: "waveform.path")
+                HistoryMetric(title: "Readings", value: "\(chart.points.count)", detail: measurementSpan(chart), symbol: "waveform.path")
             }
             .padding(.horizontal, 2)
 
             VStack(spacing: 12) {
                 HStack {
-                    Picker("Zaman aralığı", selection: $hours) {
-                        Text("6 saat").tag(6)
-                        Text("24 saat").tag(24)
-                        Text("7 gün").tag(168)
+                    Picker("Time range", selection: $hours) {
+                        Text("6 hours").tag(6)
+                        Text("24 hours").tag(24)
+                        Text("7 days").tag(168)
                     }
                     .pickerStyle(.segmented).labelsHidden().frame(width: 224)
                     .accessibilityIdentifier("history-period")
                     Spacer()
-                    Toggle(isOn: $focused) { Label("Veriye odaklan", systemImage: "arrow.up.left.and.arrow.down.right") }
+                    Toggle(isOn: $focused) { Label("Focus on data", systemImage: "arrow.up.left.and.arrow.down.right") }
                         .toggleStyle(.button).buttonStyle(.bordered).controlSize(.small)
-                        .help("Ölçüm bulunan zamana ve pil seviyesine yakınlaş. Kapattığında seçilen aralığın tamamı ve %0–100 ölçeği gösterilir.")
+                        .help("Zoom in on the times and battery levels that have readings. When off, the whole range and a 0–100% scale are shown.")
                         .accessibilityIdentifier("history-focus")
                 }
                 HistoryPlot(chart: chart, hours: hours, focused: focused)
@@ -49,15 +49,15 @@ struct DeviceBatteryHistoryView: View {
 
             HStack(spacing: 8) {
                 Image(systemName: "clock").foregroundStyle(.tertiary)
-                Text(store.history.samples[deviceID]?.first.map { "Kayıt başlangıcı " + $0.date.formatted(date: .abbreviated, time: .shortened) } ?? "Ölçümler MacPulse çalışırken kaydedilir.")
+                Text(store.history.samples[deviceID]?.first.map { String(localized: "Recording since \($0.date.formatted(date: .abbreviated, time: .shortened))") } ?? String(localized: "Readings are recorded while MacPulse is running."))
                     .foregroundStyle(.secondary)
                 Spacer(minLength: 8)
                 if let device, device.source != .mac {
                     Button { ConnectionSettings.open(device) } label: {
-                        Label(device.connection?.label ?? "Bağlantı", systemImage: "network")
+                        Label(device.connection?.label ?? String(localized: "Connection"), systemImage: "network")
                     }
                     .buttonStyle(.plain).foregroundStyle(.secondary)
-                    .help("Bağlantı ayarlarını aç")
+                    .help("Open connection settings")
                 }
             }
             .font(.system(size: 11))
@@ -75,11 +75,11 @@ struct DeviceBatteryHistoryView: View {
                 .background(.blue.opacity(0.09), in: RoundedRectangle(cornerRadius: 13))
                 .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 6) {
-                Text(device.map { store.name($0) } ?? "Pil geçmişi")
+                Text(device.map { store.name($0) } ?? String(localized: "Battery history"))
                     .font(.system(size: 21, weight: .semibold)).lineLimit(1)
                 HStack(spacing: 5) {
                     Circle().fill(!store.isPaused && device?.isLive(at: store.now) == true ? Color.green : Color.secondary).frame(width: 5, height: 5)
-                    Text(device.map { (!store.isPaused && $0.isLive(at: store.now)) ? ($0.isCharging && $0.displayLevel() != nil ? "Şarj oluyor" : "Bağlı") : "Çevrimdışı" } ?? "Pil geçmişi")
+                    Text(device.map { (!store.isPaused && $0.isLive(at: store.now)) ? ($0.isCharging && $0.displayLevel() != nil ? String(localized: "Charging") : String(localized: "Connected")) : String(localized: "Offline") } ?? String(localized: "Battery history"))
                     if let connection = device?.connection { Text("· " + connection.label) }
                 }.font(.system(size: 12)).foregroundStyle(.secondary)
             }
@@ -89,10 +89,10 @@ struct DeviceBatteryHistoryView: View {
                     if !store.isPaused && device?.isLive(at: store.now) == true, device?.isCharging == true, device?.displayLevel() != nil {
                         Image(systemName: "bolt.fill").font(.system(size: 18)).foregroundStyle(.green)
                     }
-                    Text(device?.displayLevel().map { (device?.approximate == true ? "≈" : "") + "\($0)%" } ?? "—")
+                    Text(device?.displayLevel().map { (device?.approximate == true ? "≈" : "") + LocalizedFormat.percent($0) } ?? "—")
                         .font(.system(size: 31, weight: .semibold, design: .rounded)).monospacedDigit()
                 }
-                Text(!store.isPaused && device?.isLive(at: store.now) == true && device?.displayLevel() != nil ? "Güncel pil" : "Son ölçüm")
+                Text(!store.isPaused && device?.isLive(at: store.now) == true && device?.displayLevel() != nil ? "Current battery" : "Last measured")
                     .font(.system(size: 10)).foregroundStyle(.secondary)
                 if !store.isPaused, let power = device?.displayPower(at: store.now) {
                     Text(power.powerText).font(.system(size: 11, weight: .medium))
@@ -104,8 +104,8 @@ struct DeviceBatteryHistoryView: View {
     }
 
     private func measurementSpan(_ chart: BatteryHistoryChart) -> String {
-        guard let first = chart.points.first, let last = chart.points.last else { return "Henüz kayıt yok" }
-        if first.date == last.date { return "Tek ölçüm" }
+        guard let first = chart.points.first, let last = chart.points.last else { return String(localized: "No records yet") }
+        if first.date == last.date { return String(localized: "Single reading") }
         if Calendar.current.isDate(first.date, inSameDayAs: last.date) {
             return first.date.formatted(date: .omitted, time: .shortened) + " – " + last.date.formatted(date: .omitted, time: .shortened)
         }
@@ -114,7 +114,7 @@ struct DeviceBatteryHistoryView: View {
 }
 
 private struct HistoryMetric: View {
-    let title: String
+    let title: LocalizedStringKey
     let value: String
     let detail: String
     let symbol: String
@@ -141,10 +141,10 @@ private struct HistoryPlot: View {
     var body: some View {
         VStack(spacing: 10) {
             HStack(spacing: 12) {
-                legend("Pil seviyesi", color: blue)
-                legend("Şarj", color: green)
+                legend("Battery level", color: blue)
+                legend("Charge", color: green)
                 Spacer()
-                Text(focused && !chart.points.isEmpty ? "Yakın görünüm · %\(chart.levelRange.lowerBound)–\(chart.levelRange.upperBound)" : "Tam ölçek · %0–100")
+                Text(focused && !chart.points.isEmpty ? "Zoomed view · \(LocalizedFormat.percent(chart.levelRange.lowerBound))–\(LocalizedFormat.percent(chart.levelRange.upperBound))" : "Full scale · \(LocalizedFormat.percent(0))–\(LocalizedFormat.percent(100))")
                     .font(.system(size: 10)).foregroundStyle(.secondary)
             }
             .accessibilityElement(children: .combine)
@@ -153,7 +153,7 @@ private struct HistoryPlot: View {
                 HStack(spacing: 9) {
                     GeometryReader { geometry in
                         ForEach(chart.levelTicks, id: \.self) { level in
-                            Text("\(level)%").font(.system(size: 10)).monospacedDigit().foregroundStyle(.secondary)
+                            Text(LocalizedFormat.percent(level)).font(.system(size: 10)).monospacedDigit().foregroundStyle(.secondary)
                                 .position(x: 17, y: yPosition(level, height: geometry.size.height))
                         }
                     }.frame(width: 34).accessibilityHidden(true)
@@ -174,8 +174,12 @@ private struct HistoryPlot: View {
                             })
                     }
                     .accessibilityElement(children: .ignore)
-                    .accessibilityLabel("Pil grafiği, son \(hours) saat")
-                    .accessibilityValue(chart.points.last?.level.map { "Son kayıt yüzde \($0). \(chart.points.count) ölçüm, \(chart.segments.count) ayrı ölçüm aralığı. " + (focused ? "Yakınlaştırılmış pil ölçeği yüzde \(chart.levelRange.lowerBound) ile \(chart.levelRange.upperBound)." : "Pil ölçeği yüzde 0 ile 100.") } ?? "Henüz ölçüm yok")
+                    .accessibilityLabel("Battery chart, last \(hours) hours")
+                    .accessibilityValue(chart.points.last?.level.map { level in
+                        String(localized: "Last reading \(LocalizedFormat.percent(level)). \(chart.points.count) readings, \(chart.segments.count) separate measurement intervals.") + " "
+                            + (focused ? String(localized: "Zoomed battery scale from \(LocalizedFormat.percent(chart.levelRange.lowerBound)) to \(LocalizedFormat.percent(chart.levelRange.upperBound)).")
+                                : String(localized: "Battery scale from \(LocalizedFormat.percent(0)) to \(LocalizedFormat.percent(100))."))
+                    } ?? String(localized: "No readings yet"))
                 }
                 .padding(.vertical, 7)
                 GeometryReader { geometry in
@@ -194,18 +198,18 @@ private struct HistoryPlot: View {
                 if let point = selected ?? chart.points.last, let level = point.level {
                     Image(systemName: point.charging ? "bolt.fill" : "circle.fill")
                         .font(.system(size: point.charging ? 10 : 5)).foregroundStyle(point.charging ? green : blue)
-                    Text(selected != nil ? (pinned ? "Seçili ölçüm" : "Ölçüm") : "Son ölçüm").foregroundStyle(.secondary)
+                    Text(selected != nil ? (pinned ? "Selected reading" : "Reading") : "Last measured").foregroundStyle(.secondary)
                     Text(point.date.formatted(date: Calendar.current.isDateInToday(point.date) ? .omitted : .abbreviated, time: .shortened)).foregroundStyle(.secondary)
-                    Text("· %\(level)").fontWeight(.semibold)
-                    if point.charging { Text("· Şarj oluyor").foregroundStyle(green) }
+                    Text("· \(LocalizedFormat.percent(level))").fontWeight(.semibold)
+                    if point.charging { Text("· Charging").foregroundStyle(green) }
                     if pinned {
                         Button { pinned = false; selectedDate = nil } label: { Image(systemName: "xmark.circle.fill") }
-                            .buttonStyle(.plain).foregroundStyle(.secondary).help("Ölçüm seçimini temizle")
-                            .accessibilityLabel("Ölçüm seçimini temizle")
+                            .buttonStyle(.plain).foregroundStyle(.secondary).help("Clear reading selection")
+                            .accessibilityLabel("Clear reading selection")
                     }
-                } else { Text("Ölçümler geldikçe grafik oluşur").foregroundStyle(.secondary) }
+                } else { Text("The chart builds as readings arrive").foregroundStyle(.secondary) }
                 Spacer(minLength: 4)
-                Text("Boşluklar: ölçüm yok").foregroundStyle(.tertiary)
+                Text("Gaps: no readings").foregroundStyle(.tertiary)
             }
             .font(.system(size: 10)).monospacedDigit().frame(height: 16)
         }
@@ -213,7 +217,7 @@ private struct HistoryPlot: View {
         .onChange(of: focused) { selectedDate = nil; pinned = false }
     }
 
-    private func legend(_ text: String, color: Color) -> some View {
+    private func legend(_ text: LocalizedStringKey, color: Color) -> some View {
         HStack(spacing: 5) {
             Capsule().fill(color).frame(width: 12, height: 3)
             Text(text).font(.system(size: 10)).foregroundStyle(.secondary)
@@ -264,8 +268,8 @@ private struct HistoryPlot: View {
             if chart.points.isEmpty {
                 VStack(spacing: 8) {
                     Image(systemName: "chart.xyaxis.line").font(.system(size: 28, weight: .light)).foregroundStyle(.tertiary)
-                    Text("Bu aralıkta henüz ölçüm yok").font(.system(size: 13, weight: .medium))
-                    Text("Daha geniş bir aralık seçebilir veya yeni ölçümleri bekleyebilirsin.").font(.system(size: 11)).foregroundStyle(.secondary)
+                    Text("No readings in this range yet").font(.system(size: 13, weight: .medium))
+                    Text("You can pick a wider range or wait for new readings.").font(.system(size: 11)).foregroundStyle(.secondary)
                 }
             }
         }

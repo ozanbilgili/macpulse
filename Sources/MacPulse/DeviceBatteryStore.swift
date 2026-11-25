@@ -11,7 +11,7 @@ import MetricsCore
     private(set) var isPaused = false
     var history = BatteryHistory()
     var migration: BatteryMigration?
-    var notificationStatus = "Kapalı"
+    var notificationStatus = String(localized: "Off")
     var expandedGroups: Set<String> = []
     var settingsTab = "general"
     var selectedSettingsDevice: String?
@@ -54,7 +54,7 @@ import MetricsCore
         if acceptance == nil {
             let source = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent("PilBar")
             do { migration = try storage.migrate(from: source) }
-            catch { issues = ["PilBar aktarımı tamamlanamadı; kaynak kayıtlar korunuyor."] }
+            catch { issues = [String(localized: "PilBar import couldn't be completed; the source records are kept.")] }
         }
         history = storage.read(BatteryHistory.self, file: "history.json") ?? BatteryHistory()
         if let saved = storage.read(BatteryPreferences.self, file: "preferences.json") { preferences = saved }
@@ -109,7 +109,7 @@ import MetricsCore
         now = snapshot.date
         var mac: [BatteryDevice] = []
         if let b = snapshot.battery, b.present, let level = b.percent {
-            mac = [.init(id: "mac:internal", name: "Bu Mac", level: level, isCharging: b.charging, source: .mac,
+            mac = [.init(id: "mac:internal", name: String(localized: "This Mac"), level: level, isCharging: b.charging, source: .mac,
                          measuredAt: snapshot.date, lastSeenAt: snapshot.date, connection: .internalBattery, telemetry: .iokit)]
         }
         if snapshot.battery != nil { devices = BatteryLedger.merge(devices, snapshot: .init(devices: mac, successfulSources: [.mac])) }
@@ -178,7 +178,7 @@ import MetricsCore
     }
     private func persist<T: Encodable>(_ value: T, file: String) {
         do { try storage.write(value, file: file) }
-        catch { if !issues.contains("Pil verileri kaydedilemedi.") { issues.append("Pil verileri kaydedilemedi.") } }
+        catch { if !issues.contains(String(localized: "Battery data couldn't be saved.")) { issues.append(String(localized: "Battery data couldn't be saved.")) } }
     }
     func forgetOffline() {
         let removed = devices.filter { !$0.isLive(at: now) }

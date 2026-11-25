@@ -19,7 +19,7 @@ private func device(_ name: String = "Test headset", address: String = "00-11-22
 }
 @Test func accessoryZeroBatteryIsReportedWithoutInventingCharging() throws {
     let s = try profile(connected: [device(extra: ["device_batteryLevel": "0%"])] )
-    #expect(s.accessories.first?.reportedBatteries == [AccessoryBattery(component: "Genel", percent: 0)])
+    #expect(s.accessories.first?.reportedBatteries == [AccessoryBattery(component: "main", percent: 0)])
 }
 @Test func accessoryOfflineCachedAirPodsLevelsAreDiscarded() throws {
     let s = try profile(offline: [device(extra: ["device_batteryLevelLeft": "%100", "device_batteryLevelRight": "%100", "device_batteryLevelCase": "%40"])])

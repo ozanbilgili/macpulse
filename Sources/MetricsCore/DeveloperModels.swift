@@ -4,7 +4,10 @@ public struct TCPListener: Hashable, Sendable, Identifiable {
     public let port: UInt16
     public let ipv6, loopback, wildcard: Bool
     public var id: String { "\(port):\(ipv6):\(loopback):\(wildcard)" }
-    public var label: String { "\(port) · \(ipv6 ? "IPv6" : "IPv4") · \(loopback ? "yerel" : wildcard ? "tüm arayüzler" : "belirli arayüz")" }
+    public var label: String {
+        let scope = loopback ? String(localized: "local") : wildcard ? String(localized: "all interfaces") : String(localized: "specific interface")
+        return "\(port) · \(ipv6 ? "IPv6" : "IPv4") · \(scope)"
+    }
 }
 
 public struct DeveloperReading: Sendable {
@@ -19,7 +22,8 @@ public struct DeveloperReading: Sendable {
 }
 
 public enum ProjectAttribution: String, Sendable {
-    case directory = "Çalışma dizini", parent = "Ebeveyn süreci"
+    case directory, parent
+    public var label: String { switch self { case .directory: String(localized: "Working directory"); case .parent: String(localized: "Parent process") } }
 }
 public struct ProjectMember: Sendable, Identifiable {
     public let usage: ProcessUsage
@@ -28,7 +32,13 @@ public struct ProjectMember: Sendable, Identifiable {
     public var id: ProcessIdentity { usage.identity }
 }
 public enum ProjectActivity: String, Sendable {
-    case active = "Etkin", observing = "Gözleniyor", idleCandidate = "Boşta adayı", unknown = "Eksik ölçüm"
+    case active, observing, idleCandidate, unknown
+    public var label: String {
+        switch self {
+        case .active: String(localized: "Active"); case .observing: String(localized: "Observing")
+        case .idleCandidate: String(localized: "Idle candidate"); case .unknown: String(localized: "Missing measurement")
+        }
+    }
 }
 public struct DevelopmentProject: Sendable, Identifiable {
     public let root: String

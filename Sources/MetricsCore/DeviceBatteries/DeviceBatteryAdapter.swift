@@ -11,13 +11,13 @@ public enum DeviceBatteryAdapter {
             // Successful inventory marks known absent devices offline in the ledger.
             // Never create a "last measurement" card for an unseen offline peripheral.
             guard connected else { continue }
-            let main = accessory.reportedBatteries.first { $0.component == "Genel" }?.percent
-                ?? accessory.reportedBatteries.filter { ["Sol", "Sağ"].contains($0.component) }.map(\.percent).min()
+            let main = accessory.reportedBatteries.first { $0.component == "main" }?.percent
+                ?? accessory.reportedBatteries.filter { ["left", "right"].contains($0.component) }.map(\.percent).min()
             let level = accessory.batteryLimitation == nil && connected ? main : nil
             devices.append(.init(id: accessory.id, name: accessory.name, level: level, isCharging: accessory.reportedCharging ?? false, isConnected: connected, source: .bluetooth,
                                  measuredAt: level == nil ? nil : snapshot.date, lastSeenAt: connected ? snapshot.date : nil,
                                  connection: .bluetooth, telemetry: .macOSBluetooth))
-            if connected, let box = accessory.reportedBatteries.first(where: { $0.component == "Kutu" }) {
+            if connected, let box = accessory.reportedBatteries.first(where: { $0.component == "case" }) {
                 devices.append(.init(id: accessory.id + ":case", name: accessory.name + " Case", level: box.percent, isCharging: box.charging ?? false,
                                      source: .bluetooth, measuredAt: snapshot.date, lastSeenAt: snapshot.date,
                                      connection: .bluetooth, telemetry: .macOSBluetooth))

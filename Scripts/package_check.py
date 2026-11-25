@@ -11,6 +11,9 @@ import sys
 from datetime import datetime, timezone
 
 ROOT = Path(__file__).resolve().parents[1]
+LOCALIZATIONS = ['en', 'tr']
+LOCALIZED_FILES = {'en': ['Localizable.stringsdict', 'InfoPlist.strings', 'Setup.html'],
+                   'tr': ['Localizable.strings', 'InfoPlist.strings', 'Setup.html']}
 REASONS = {'NSPrivacyAccessedAPICategoryUserDefaults': ['CA92.1'],
            'NSPrivacyAccessedAPICategorySystemBootTime': ['35F9.1'],
            'NSPrivacyAccessedAPICategoryDiskSpace': ['85F4.1']}
@@ -56,8 +59,9 @@ def metadata(app, mode, arches):
             'CFBundleVersion': value['BUILD_NUMBER'], 'LSMinimumSystemVersion': value['MACOS_MIN_VERSION'],
             'LSUIElement': False, 'CFBundleIconFile': 'Icon', 'NSHighResolutionCapable': True,
             'NSHumanReadableCopyright': 'MacPulse',
-            'NSBluetoothAlwaysUsageDescription': 'Bağlı aksesuarların pil durumu yerel olarak gösterilir.',
-            'NSLocalNetworkUsageDescription': 'Bu Mac ile önceden eşleşmiş iPhone ve iPad pilleri yerel ağdan okunur.',
+            'CFBundleDevelopmentRegion': 'en', 'CFBundleLocalizations': LOCALIZATIONS,
+            'NSBluetoothAlwaysUsageDescription': 'Battery levels of connected accessories are shown locally.',
+            'NSLocalNetworkUsageDescription': 'Batteries of iPhones and iPads already paired with this Mac are read over the local network.',
             'NSBonjourServices': ['_apple-mobdev2._tcp'],
             'DistributionChannel': 'local-preview' if mode == 'adhoc' else 'developer-id',
             'SupportedArchitectures': arches,
@@ -71,6 +75,20 @@ def privacy(value):
     reasons = {e['NSPrivacyAccessedAPIType']: e['NSPrivacyAccessedAPITypeReasons'] for e in entries}
     if reasons != REASONS or len(entries) != len(REASONS):
         raise ValueError('Privacy required-reason declarations do not match the reviewed source')
+
+def localizations(info, resources):
+    if info.get('CFBundleDevelopmentRegion') != 'en' or info.get('CFBundleLocalizations') != LOCALIZATIONS:
+        raise ValueError('Localization metadata mismatch')
+    for lang, names in LOCALIZED_FILES.items():
+        for name in names:
+            path = resources / f'{lang}.lproj' / name
+            if not path.is_file() or path.stat().st_size == 0:
+                raise ValueError(f'Missing localized resource: {lang}.lproj/{name}')
+    if any(resources.glob('*.xcstrings')) or any(resources.glob('*.html')):
+        raise ValueError('Uncompiled catalog or unlocalized help page in bundle')
+    strings = plistlib.loads((resources / 'tr.lproj/Localizable.strings').read_bytes())
+    if strings.get('Battery') != 'Pil':
+        raise ValueError('Turkish string table is incomplete')
 
 def signature_ready(display):
     return ('Authority=Developer ID Application:' in display
@@ -97,6 +115,7 @@ def verify(app, mode='adhoc', arches=None):
     if len(minimums) != len(actual) or any(v != '14.0' for v in minimums):
         raise ValueError('Mach-O deployment target mismatch')
     resources = app / 'Contents/Resources'
+    localizations(info, resources)
     privacy(plistlib.loads((resources / 'PrivacyInfo.xcprivacy').read_bytes()))
     if (resources / 'ThirdPartyNotices.md').read_bytes() != (ROOT / 'docs/THIRD-PARTY.md').read_bytes():
         raise ValueError('Missing/changed third-party notice')

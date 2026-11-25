@@ -43,7 +43,7 @@ struct MenuWidgetTests {
     @Test func windowSelectionRespectsPlanAndDoesNotFabricateUnavailableLimit() {
         let now = Date(timeIntervalSince1970: 1_800_000_000)
         let lite = AIUsage.Usage(five: .init(pct: 0, resetsAt: nil, known: false), week: .init(pct: 20, resetsAt: now.addingTimeInterval(1000)), fetchedAt: now, hasFive: false, hasWeek: true)
-        #expect(MenuWidget(.codex, window: .both).windows(in: lite, now: now).map(\.label) == ["Haftalık"])
+        #expect(MenuWidget(.codex, window: .both).windows(in: lite, now: now).map(\.label) == ["Weekly"])
         #expect(MenuWidget(.codex, window: .five).windows(in: lite, now: now).isEmpty)
         #expect(MenuWidget(.codex, window: .week).windows(in: lite, now: now).first?.value.pct == 20)
         #expect(MenuWidget(.codex).windows(in: nil, now: now).isEmpty)

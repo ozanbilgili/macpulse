@@ -4,8 +4,8 @@ public enum MenuWidgetKind: String, CaseIterable, Codable, Sendable {
     case cpu, gpu, memory, network, disk, battery, claude, codex, openRouter, deviceBattery
     public var label: String {
         switch self {
-        case .cpu: "CPU"; case .gpu: "GPU"; case .memory: "Bellek"; case .network: "Ağ indirme"
-        case .disk: "Disk doluluğu"; case .battery: "Pil"; case .claude: "Claude"; case .codex: "Codex"; case .openRouter: "OpenRouter"; case .deviceBattery: "Cihaz pili"
+        case .cpu: "CPU"; case .gpu: "GPU"; case .memory: String(localized: "Memory"); case .network: String(localized: "Network download")
+        case .disk: String(localized: "Disk usage"); case .battery: String(localized: "Battery"); case .claude: "Claude"; case .codex: "Codex"; case .openRouter: "OpenRouter"; case .deviceBattery: String(localized: "Device battery")
         }
     }
     public var isLimit: Bool { self == .claude || self == .codex }
@@ -20,7 +20,7 @@ public enum MenuWidgetKind: String, CaseIterable, Codable, Sendable {
 
 public enum MenuWidgetWindow: String, CaseIterable, Codable, Sendable {
     case both, five, week
-    public var label: String { switch self { case .both: "İki limit"; case .five: "5 saat"; case .week: "Haftalık" } }
+    public var label: String { switch self { case .both: String(localized: "Both limits"); case .five: String(localized: "5-hour"); case .week: String(localized: "Weekly") } }
 }
 
 /// Identity depends on the source, never its mutable display name or login state.
@@ -52,8 +52,8 @@ public struct MenuWidget: Codable, Equatable, Sendable, Identifiable {
     public func windows(in usage: AIUsage.Usage?, now: Date) -> [(label: String, value: AIUsage.Window, meter: AIUsage.MeterState)] {
         guard let usage else { return [] }
         var result: [(String, AIUsage.Window, AIUsage.MeterState)] = []
-        if window != .week && usage.hasFive { result.append(("5 saat", usage.five.effective(at: now), usage.meterFive(now: now))) }
-        if window != .five && usage.hasWeek { result.append(("Haftalık", usage.week.effective(at: now), usage.meterWeek(now: now))) }
+        if window != .week && usage.hasFive { result.append((String(localized: "5-hour"), usage.five.effective(at: now), usage.meterFive(now: now))) }
+        if window != .five && usage.hasWeek { result.append((String(localized: "Weekly"), usage.week.effective(at: now), usage.meterWeek(now: now))) }
         return result
     }
     /// Highest current five-hour usage first. Weekly-only plans and unavailable readings

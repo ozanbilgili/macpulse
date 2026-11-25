@@ -3,7 +3,8 @@ import MetricsCore
 
 struct MenuWidgetEditor: View {
     @Bindable var store: MonitorStore
-    @State private var catalogScope = "Tümü"
+    private enum Scope: Hashable { case all, system, ai, batteries }
+    @State private var catalogScope = Scope.all
     private var selected: [MenuWidget] { store.preferences.manualWidgets(for: store.usage) }
     private var displayed: [MenuWidget] { store.preferences.widgets(for: store.usage) }
     private var automatic: Bool { store.preferences.menuWidgetSelection == .topFourFiveHour }
@@ -17,13 +18,13 @@ struct MenuWidgetEditor: View {
         VStack(alignment: .leading, spacing: 18) {
             HStack {
                 VStack(alignment: .leading, spacing: 5) {
-                    Label("Menü çubuğu widget'ları", systemImage: "menubar.rectangle").font(.title2.weight(.semibold))
-                    Text("Görmek istediklerini seç. Sırayı ve her hesabın görünümünü ayrı düzenle.").font(.callout).foregroundStyle(Palette.secondary)
+                    Label("Menu Bar Widgets", systemImage: "menubar.rectangle").font(.title2.weight(.semibold))
+                    Text("Choose what you want to see. Edit the order and each account's display separately.").font(.callout).foregroundStyle(Palette.secondary)
                 }
                 Spacer()
-                Button("Kullanım ayrıntıları") { store.showUsage() }
+                Button("Usage details") { store.showUsage() }
             }
-            Picker("Menü çubuğunda göster", selection: Binding(get: { store.preferences.menuWidgetSelection }, set: { store.preferences.menuWidgetSelection = $0 })) {
+            Picker("Show in menu bar", selection: Binding(get: { store.preferences.menuWidgetSelection }, set: { store.preferences.menuWidgetSelection = $0 })) {
                 ForEach(MenuWidgetSelection.allCases, id: \.self) { Text($0.label).tag($0) }
             }.pickerStyle(.segmented)
             preview
@@ -35,27 +36,30 @@ struct MenuWidgetEditor: View {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 18) {
                         HStack {
-                            Text("Seçili widget'lar · \(selected.count)").font(.headline)
+                            Text("Selected widgets · \(selected.count)").font(.headline)
                             Spacer()
-                            Button("Widget ekle") { withAnimation { proxy.scrollTo("widget-catalog", anchor: .top) } }.buttonStyle(.link)
-                            Button("Yalnız simge") { store.preferences.setWidgets([]) }.buttonStyle(.link).disabled(selected.isEmpty)
+                            Button("Add widget") { withAnimation { proxy.scrollTo("widget-catalog", anchor: .top) } }.buttonStyle(.link)
+                            Button("Icon only") { store.preferences.setWidgets([]) }.buttonStyle(.link).disabled(selected.isEmpty)
                         }
                         if selected.isEmpty {
-                            Text("Menü çubuğunda MacPulse simgesi görünür. Aşağıdan widget ekleyebilirsin.")
+                            Text("The MacPulse icon appears in the menu bar. You can add widgets below.")
                                 .font(.callout).foregroundStyle(Palette.secondary).padding(18).frame(maxWidth: .infinity, alignment: .leading).widgetCard()
                         }
                         ForEach(Array(selected.enumerated()), id: \.element.id) { index, widget in
                             selectedRow(widget, index: index)
                         }
-                        Text("Widget ekle").font(.headline).padding(.top, 8).id("widget-catalog")
-                        Picker("Widget türü", selection: $catalogScope) {
-                            ForEach(["Tümü", "Sistem", "AI", "Cihaz pilleri"], id: \.self) { Text($0).tag($0) }
+                        Text("Add widget").font(.headline).padding(.top, 8).id("widget-catalog")
+                        Picker("Widget type", selection: $catalogScope) {
+                            Text("All").tag(Scope.all)
+                            Text("System").tag(Scope.system)
+                            Text(verbatim: "AI").tag(Scope.ai)
+                            Text("Device batteries").tag(Scope.batteries)
                         }.pickerStyle(.segmented)
                         LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
                             ForEach(catalog.filter { widget in
-                                catalogScope == "Tümü" || (catalogScope == "AI" && [MenuWidgetKind.claude, .codex, .openRouter].contains(widget.kind))
-                                    || (catalogScope == "Cihaz pilleri" && widget.kind == .deviceBattery)
-                                    || (catalogScope == "Sistem" && MenuMetric(rawValue: widget.kind.rawValue) != nil)
+                                catalogScope == .all || (catalogScope == .ai && [MenuWidgetKind.claude, .codex, .openRouter].contains(widget.kind))
+                                    || (catalogScope == .batteries && widget.kind == .deviceBattery)
+                                    || (catalogScope == .system && MenuMetric(rawValue: widget.kind.rawValue) != nil)
                             }) { widget in
                                 HStack(spacing: 10) {
                                     MenuWidgetIcon(kind: widget.kind).foregroundStyle(widgetColor(widget.kind)).frame(width: 24)
@@ -65,23 +69,23 @@ struct MenuWidgetEditor: View {
                                     }
                                     Spacer()
                                     let on = selected.contains { $0.id == widget.id }
-                                    Button(on ? "Eklendi" : "Ekle") { store.preferences.setWidgets(selected + [widget]) }
-                                        .disabled(on).accessibilityLabel("\(widget.label) \(on ? "eklendi" : "ekle")")
+                                    Button(on ? "Added" : "Add") { store.preferences.setWidgets(selected + [widget]) }
+                                        .disabled(on).accessibilityLabel(on ? "\(widget.label) added" : "Add \(widget.label)")
                                 }.padding(14).widgetCard()
                             }
                         }
-                        Text("Yeni Claude hesapları listede görünür; kaydettiğin düzene kendiliğinden eklenmez. Veri olmayan seçili widget — gösterir. Tüm kullanım ayrıntıları AI Kullanımı ekranında ve hızlı panelde bulunur.")
+                        Text("New Claude accounts appear in the list; they aren't added to your saved layout automatically. A selected widget without data shows —. All usage details are on the AI Usage screen and in the quick panel.")
                             .font(.caption).foregroundStyle(Palette.secondary).fixedSize(horizontal: false, vertical: true)
                     }.padding(.bottom, 8)
                 }
                 }
             }
-            Text("Değişiklikler anında uygulanır ve bu Mac'te saklanır.").font(.caption).foregroundStyle(Palette.secondary)
+            Text("Changes apply immediately and are stored on this Mac.").font(.caption).foregroundStyle(Palette.secondary)
         }.padding(24).frame(minWidth: 660, minHeight: 560).background(Palette.background)
     }
     private var automaticAccounts: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Şu an üst çubukta").font(.headline)
+            Text("In the menu bar now").font(.headline)
             ForEach(Array(displayed.enumerated()), id: \.element.id) { index, widget in
                 HStack(spacing: 10) {
                     Text("\(index + 1)").font(.caption.monospacedDigit()).foregroundStyle(Palette.secondary).frame(width: 18)
@@ -89,29 +93,29 @@ struct MenuWidgetEditor: View {
                     Text(title(widget)).font(.callout.weight(.medium))
                     Spacer()
                     if let pct = state(widget)?.usage?.five.effective(at: store.usage.now).pct {
-                        Text("5 saat · %\(pct)").font(.callout.monospacedDigit())
+                        Text("5-hour · \(LocalizedFormat.percent(pct))").font(.callout.monospacedDigit())
                     }
                 }.padding(12).widgetCard()
             }
             if displayed.isEmpty {
-                Text("Güncel 5 saatlik kullanım verisi bekleniyor.").foregroundStyle(Palette.secondary)
+                Text("Waiting for current 5-hour usage data.").foregroundStyle(Palette.secondary)
             }
-            Text("Yalnız güncel, bilinen 5 saatlik limitler sıralanır. Sadece haftalık limiti olan planlar, oturumu kapalı hesaplar ve eski/verisiz okumalar bu dörde dahil edilmez. Tüm hesaplar açılan AI panelinde görünür.")
+            Text("Only current, known 5-hour limits are ranked. Weekly-only plans, signed-out accounts and stale or empty readings aren't included in these four. All accounts appear in the AI panel.")
                 .font(.caption).foregroundStyle(Palette.secondary).fixedSize(horizontal: false, vertical: true)
-            Text("Elle seçtiğin widget düzeni saklıdır; üstteki seçenekten geri dönebilirsin.")
+            Text("Your manually chosen widget layout is saved; you can switch back with the option above.")
                 .font(.caption).foregroundStyle(Palette.secondary)
         }
     }
     private var preview: some View {
         VStack(alignment: .leading, spacing: 10) {
-            HStack { Text("Canlı önizleme").font(.caption.weight(.semibold)); Spacer(); Text(automatic ? "5 saat · yüksekten düşüğe" : "Soldan sağa menü sırası").font(.caption).foregroundStyle(Palette.secondary) }
+            HStack { Text("Live preview").font(.caption.weight(.semibold)); Spacer(); Text(automatic ? "5-hour · highest to lowest" : "Menu order, left to right").font(.caption).foregroundStyle(Palette.secondary) }
             HStack {
                 if let image = MenuWidgetRenderer.image(widgets: displayed, store: store) {
                     Image(nsImage: image).frame(height: 28).accessibilityLabel(MenuWidgetRenderer.description(widgets: displayed, store: store))
-                } else { Image(systemName: "waveform.path.ecg").font(.title3).foregroundStyle(Palette.accent).frame(height: 28).accessibilityLabel("MacPulse simgesi") }
+                } else { Image(systemName: "waveform.path.ecg").font(.title3).foregroundStyle(Palette.accent).frame(height: 28).accessibilityLabel("MacPulse icon") }
                 Spacer(minLength: 0)
             }
-            Text(automatic ? "5 saatlik kullanımı en yüksek dört hesap; tek satırda hesap numarası ve kullanılan yüzde. Sıra yeni ölçüm ve sıfırlanmalarda otomatik değişir." : "Üst çubukta tek satır. AI sayıları yüzdeyi gösterir: üstte 5 saat, altta haftalık; tek limit ortalanır. Alan daraldığında etiket ve boşluklar kısalır.").font(.caption).foregroundStyle(Palette.secondary)
+            Text(automatic ? "The four accounts with the highest 5-hour usage; one line with account number and percentage used. The order updates automatically with new readings and resets." : "One line in the menu bar. AI numbers show percentages: 5-hour on top, weekly below; a single limit is centered. Labels and spacing shrink when space is tight.").font(.caption).foregroundStyle(Palette.secondary)
         }.padding(16).background(Palette.elevated, in: RoundedRectangle(cornerRadius: 14))
     }
     private func selectedRow(_ widget: MenuWidget, index: Int) -> some View {
@@ -122,31 +126,31 @@ struct MenuWidgetEditor: View {
                     .font(.callout.weight(.semibold)).foregroundStyle(widgetColor(widget.kind))
                 Spacer()
                 Button { move(widget.id, by: -1) } label: { Image(systemName: "arrow.up") }
-                    .disabled(index == 0).accessibilityLabel("\(widget.label) sola taşı")
+                    .disabled(index == 0).accessibilityLabel("Move \(widget.label) left")
                 Button { move(widget.id, by: 1) } label: { Image(systemName: "arrow.down") }
-                    .disabled(index == selected.count - 1).accessibilityLabel("\(widget.label) sağa taşı")
+                    .disabled(index == selected.count - 1).accessibilityLabel("Move \(widget.label) right")
                 Button { store.preferences.setWidgets(selected.filter { $0.id != widget.id }) } label: { Image(systemName: "minus.circle") }
-                    .accessibilityLabel("\(widget.label) kaldır")
+                    .accessibilityLabel("Remove \(widget.label)")
             }
             if widget.kind.isLimit {
                 HStack(spacing: 14) {
                     Picker("Limit", selection: binding(widget, \.window)) { ForEach(MenuWidgetWindow.allCases, id: \.self) { Text($0.label).tag($0) } }.frame(maxWidth: 220)
-                    Picker("Görünüm", selection: binding(widget, \.style)) { ForEach(AIUsageMenuStyle.allCases, id: \.self) { Text($0.label).tag($0) } }.frame(maxWidth: 180)
-                    Toggle("Kalan", isOn: binding(widget, \.showsLeft)).toggleStyle(.switch).controlSize(.small)
-                        .help("Kapalı: kullanılan yüzde. Açık: kalan yüzde ve doluluk.")
+                    Picker("Appearance", selection: binding(widget, \.style)) { ForEach(AIUsageMenuStyle.allCases, id: \.self) { Text($0.label).tag($0) } }.frame(maxWidth: 180)
+                    Toggle("Remaining", isOn: binding(widget, \.showsLeft)).toggleStyle(.switch).controlSize(.small)
+                        .help("Off: percentage used. On: percentage remaining and fill.")
                 }.font(.caption)
                 if let state = state(widget), let u = state.usage, widget.windows(in: u, now: store.usage.now).isEmpty {
-                    Text("Bu planda seçilen limit bulunmuyor; widget — gösterir.").font(.caption).foregroundStyle(Palette.disk)
+                    Text("The selected limit isn't in this plan; the widget shows —.").font(.caption).foregroundStyle(Palette.disk)
                 }
             } else if widget.kind.isBattery {
-                Picker("Görünüm", selection: binding(widget, \.style)) {
-                    Text("Pil simgesi").tag(AIUsageMenuStyle.bars)
-                    Text("Yüzde").tag(AIUsageMenuStyle.percent)
-                    Text("İkisi").tag(AIUsageMenuStyle.both)
+                Picker("Appearance", selection: binding(widget, \.style)) {
+                    Text("Battery icon").tag(AIUsageMenuStyle.bars)
+                    Text("Percentage").tag(AIUsageMenuStyle.percent)
+                    Text("Both").tag(AIUsageMenuStyle.both)
                 }.pickerStyle(.segmented)
                 Text(subtitle(widget)).font(.caption).foregroundStyle(Palette.secondary)
             } else {
-                Text(widget.kind == .openRouter ? "Kalan hesap bakiyesi · USD" : subtitle(widget)).font(.caption).foregroundStyle(Palette.secondary)
+                Text(widget.kind == .openRouter ? String(localized: "Remaining account balance · USD") : subtitle(widget)).font(.caption).foregroundStyle(Palette.secondary)
             }
         }.padding(16).widgetCard()
     }
@@ -166,23 +170,23 @@ struct MenuWidgetEditor: View {
         store.usage.states.first { widget.kind == .claude ? $0.account.provider == .claude && $0.account.n == widget.account : widget.kind == .codex && $0.account.provider == .codex }
     }
     private func title(_ widget: MenuWidget) -> String {
-        if widget.kind == .deviceBattery { return store.deviceBatteries.devices.first { $0.id == widget.deviceID }.map { store.deviceBatteries.name($0) } ?? "Cihaz pili" }
+        if widget.kind == .deviceBattery { return store.deviceBatteries.devices.first { $0.id == widget.deviceID }.map { store.deviceBatteries.name($0) } ?? String(localized: "Device battery") }
         if let state = state(widget) { return "\(widget.label) · \(state.compactLabel)" }
         return widget.label
     }
     private func subtitle(_ widget: MenuWidget) -> String {
         switch widget.kind {
-        case .claude, .codex: return state(widget)?.plan ?? "Hesap verisi bekleniyor"
-        case .openRouter: return store.usage.credit?.credit == nil ? "Bakiye verisi bekleniyor" : "Kalan hesap kredisi"
-        case .cpu: return "Tüm çekirdekler · yüzde"
-        case .gpu: return "Sürücü kullanımı · yüzde"
-        case .memory: return "Kullanılan bellek · yüzde"
-        case .network: return "Fiziksel arayüzler · saniyelik indirme"
-        case .disk: return "Başlangıç diski · kullanılan yüzde"
-        case .battery: return "Mac pili · kalan yüzde"
+        case .claude, .codex: return state(widget)?.plan ?? String(localized: "Waiting for account data")
+        case .openRouter: return store.usage.credit?.credit == nil ? String(localized: "Waiting for balance data") : String(localized: "Remaining account credit")
+        case .cpu: return String(localized: "All cores · percentage")
+        case .gpu: return String(localized: "Driver utilization · percentage")
+        case .memory: return String(localized: "Memory used · percentage")
+        case .network: return String(localized: "Physical interfaces · download per second")
+        case .disk: return String(localized: "Startup disk · percentage used")
+        case .battery: return String(localized: "Mac battery · percentage left")
         case .deviceBattery:
-            guard let d = store.deviceBatteries.devices.first(where: { $0.id == widget.deviceID }) else { return "Cihaz verisi bekleniyor" }
-            return d.isLive(at: store.deviceBatteries.now) ? (d.connection?.label ?? "Bağlı") : "Çevrimdışı · menüde —"
+            guard let d = store.deviceBatteries.devices.first(where: { $0.id == widget.deviceID }) else { return String(localized: "Waiting for device data") }
+            return d.isLive(at: store.deviceBatteries.now) ? (d.connection?.label ?? String(localized: "Connected")) : String(localized: "Offline · shows — in menu")
         }
     }
 }

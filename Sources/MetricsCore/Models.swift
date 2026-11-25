@@ -23,7 +23,7 @@ public struct CPUUsage: Sendable, Codable {
 public enum MemoryPressure: String, Sendable, Codable {
     case normal, warning, critical, unavailable
     public var label: String {
-        switch self { case .normal: "Normal"; case .warning: "Yüksek"; case .critical: "Kritik"; case .unavailable: "Ölçülemiyor" }
+        switch self { case .normal: String(localized: "Normal"); case .warning: String(localized: "High"); case .critical: String(localized: "Critical"); case .unavailable: String(localized: "Unavailable") }
     }
 }
 
@@ -87,9 +87,9 @@ public struct BatteryMetrics: Sendable, Codable {
     public let minutesRemaining: Int?
     public let lowPowerMode: Bool
     public var stateLabel: String {
-        if !present { return "Pil yok" }
-        if charging { return "Şarj oluyor" }
-        return onAC ? "Adaptöre bağlı" : "Pille çalışıyor"
+        if !present { return String(localized: "No battery") }
+        if charging { return String(localized: "Charging") }
+        return onAC ? String(localized: "On power adapter") : String(localized: "On battery")
     }
 }
 

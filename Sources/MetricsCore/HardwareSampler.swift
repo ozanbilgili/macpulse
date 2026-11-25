@@ -55,7 +55,7 @@ struct HardwareSampler {
             return withUnsafePointer(to: &raw.name) { $0.withMemoryRebound(to: CChar.self, capacity: 64) { String(cString: $0) } } == "GPU Energy"
         }
         var gpuWatts: Double?
-        var energyStatus = "GPU enerji kanalı alınamıyor"
+        var energyStatus = String(localized: "GPU energy channel unavailable")
         if energyResult == 0, gpuEnergy.count == 1, var raw = gpuEnergy.first {
             let unit = withUnsafePointer(to: &raw.unit) { $0.withMemoryRebound(to: CChar.self, capacity: 8) { String(cString: $0) } }.trimmingCharacters(in: .whitespaces)
             let busy = gpus.count == 1 ? gpus[0].devicePercent.map { $0 > 0 } : nil
@@ -63,8 +63,8 @@ struct HardwareSampler {
             energyStatus = energy.status
         } else { energy.reset() }
         if ProcessInfo.processInfo.operatingSystemVersion.majorVersion >= 27 {
-            energyStatus += " · CPU enerji modeli macOS 27+ üzerinde doğrulanamıyor"
-        } else { energyStatus += " · CPU enerji modeli bu sürümde kabul edilmedi" }
+            energyStatus += String(localized: " · CPU energy model can't be verified on macOS 27+")
+        } else { energyStatus += String(localized: " · CPU energy model not accepted in this version") }
 
         var battery = mp_battery_flow()
         let batteryResult = mp_read_battery_flow(&battery)
@@ -78,10 +78,10 @@ struct HardwareSampler {
             systemWatts: sensors.first { $0.kind == .systemPower }?.value, gpuModelWatts: gpuWatts,
             batteryNetWatts: batteryWatts, batteryUpdatedAt: updated, sensorFailures: Int(failed), invalidSensors: invalid,
             sensorsTruncated: truncated != 0,
-            gpuStatus: gpuResult == 0 ? "AGX sürücü sayaçları" : (gpus.isEmpty ? "Bu GPU sürücüsü desteklenmiyor" : "GPU listesi kısmi"),
-            sensorStatus: sensorResult == 0 ? (sensors.isEmpty ? "Sensör doğrulaması bekleniyor" : "SMC · yalnız geçerli okunan sensörler" + (ProcessInfo.processInfo.operatingSystemVersion.majorVersion >= 27 ? " · CPU Te grubu kısmi; Tp dışarıda" : "")) : "SMC sensörleri alınamıyor",
+            gpuStatus: gpuResult == 0 ? String(localized: "AGX driver counters") : (gpus.isEmpty ? String(localized: "This GPU driver isn't supported") : String(localized: "Partial GPU list")),
+            sensorStatus: sensorResult == 0 ? (sensors.isEmpty ? String(localized: "Waiting for sensor verification") : String(localized: "SMC · only sensors with valid readings") + (ProcessInfo.processInfo.operatingSystemVersion.majorVersion >= 27 ? String(localized: " · CPU Te group partial; Tp excluded") : "")) : String(localized: "SMC sensors unavailable"),
             energyStatus: energyStatus,
-            batteryFlowStatus: batteryWatts == nil ? "Pil akışı eksik, eski veya tutarsız" : "Pil net akışı · adaptör tüketimi değildir",
+            batteryFlowStatus: batteryWatts == nil ? String(localized: "Battery flow missing, stale or inconsistent") : String(localized: "Net battery flow · not adapter consumption"),
             collectionMilliseconds: (ProcessInfo.processInfo.systemUptime - begin) * 1000)
     }
 }

@@ -34,7 +34,7 @@ struct AIProfileTests {
         #expect(state.email == first.email && state.compactLabel == "first@e")
         #expect(state.subscriptionAnchor == anchor)
         let unavailable = AIUsage.loadState(account, creds: credentials, now: now, names: [:])
-        #expect(unavailable.email.isEmpty && unavailable.compactLabel == "Hesap 9901")
+        #expect(unavailable.email.isEmpty && unavailable.compactLabel == "Account 9901")
         #expect(unavailable.subscriptionAnchor == nil)
         let report = AIUsage.scanTokens(accounts: [account], now: now, projectsDir: directory.path,
             indexPath: directory.appendingPathComponent("index.json").path, subscriptionAnchors: [9901: anchor])

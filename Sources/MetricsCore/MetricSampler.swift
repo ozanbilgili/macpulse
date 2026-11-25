@@ -54,7 +54,7 @@ public actor MetricSampler {
             let current = CPUTicks(user: cpuRaw.user, system: cpuRaw.system, idle: cpuRaw.idle, nice: cpuRaw.nice)
             if continuous, let previousCPU { cpu = CPUUsage.between(previousCPU, current) }
             previousCPU = current
-        } else { previousCPU = nil; failed("cpu", "CPU ölçümü alınamadı.") }
+        } else { previousCPU = nil; failed("cpu", String(localized: "CPU measurement unavailable.")) }
 
         var memoryRaw = mp_memory()
         var memory: MemoryMetrics?
@@ -65,7 +65,7 @@ public actor MetricSampler {
             memory = MemoryMetrics(total: memoryRaw.total, app: memoryRaw.app, wired: memoryRaw.wired,
                 compressed: memoryRaw.compressed, cached: memoryRaw.cached, free: memoryRaw.free,
                 swap: memoryRaw.swap_valid != 0 ? memoryRaw.swap : nil, pressure: pressure)
-        } else { failed("memory", "Bellek ölçümü alınamadı.") }
+        } else { failed("memory", String(localized: "Memory measurement unavailable.")) }
 
         var capacityRaw = mp_disk_capacity()
         var diskEntries = [mp_disk_entry](repeating: mp_disk_entry(), count: 32)
@@ -87,11 +87,11 @@ public actor MetricSampler {
                 }
             }
             previousDisk = current
-        } else { previousDisk = [:]; failed("diskIO", "Disk okuma/yazma ölçümü bu sistemde alınamadı.") }
+        } else { previousDisk = [:]; failed("diskIO", String(localized: "Disk read/write measurement isn't available on this system.")) }
         let disk: DiskMetrics?
         if capacityStatus == 0, capacityRaw.total > 0 {
             disk = DiskMetrics(total: capacityRaw.total, available: capacityRaw.available, io: io, driverCount: Int(driverCount))
-        } else { disk = nil; failed("disk", "Disk kapasitesi alınamadı.") }
+        } else { disk = nil; failed("disk", String(localized: "Disk capacity unavailable.")) }
 
         var entries = [mp_network_entry](repeating: mp_network_entry(), count: 32)
         var count: Int32 = 0
@@ -116,7 +116,7 @@ public actor MetricSampler {
                 outgoingRate: hasBaseline ? deltas.values.reduce(0) { $0 + $1.outgoingRate } : nil,
                 sessionReceived: sessionReceived, sessionSent: sessionSent)
             previousNetwork = current
-        } else { previousNetwork = [:]; failed("network", "Ağ ölçümü alınamadı.") }
+        } else { previousNetwork = [:]; failed("network", String(localized: "Network measurement unavailable.")) }
 
         var batteryRaw = mp_battery()
         var battery: BatteryMetrics?
@@ -126,11 +126,11 @@ public actor MetricSampler {
                 onAC: batteryRaw.on_ac != 0, charging: batteryRaw.charging != 0,
                 minutesRemaining: batteryRaw.minutes_remaining > 0 ? Int(batteryRaw.minutes_remaining) : nil,
                 lowPowerMode: ProcessInfo.processInfo.isLowPowerModeEnabled)
-        } else { failed("battery", "Pil ölçümü alınamadı.") }
+        } else { failed("battery", String(localized: "Battery measurement unavailable.")) }
 
         let version = ProcessInfo.processInfo.operatingSystemVersion
         let thermal: String = switch ProcessInfo.processInfo.thermalState {
-        case .nominal: "Normal"; case .fair: "Orta"; case .serious: "Yüksek"; case .critical: "Kritik"; @unknown default: "Bilinmiyor"
+        case .nominal: String(localized: "Normal"); case .fair: String(localized: "Fair"); case .serious: String(localized: "High"); case .critical: String(localized: "Critical"); @unknown default: String(localized: "Unknown")
         }
         let system = SystemMetrics(chip: chip, cores: ProcessInfo.processInfo.processorCount,
             physicalMemory: ProcessInfo.processInfo.physicalMemory,
@@ -142,7 +142,7 @@ public actor MetricSampler {
         let hardware = hardwareSampler.sample()
         let bluetooth = bluetoothSampler.sample(uptime: start)
         let audio = audioSampler.sample()
-        if processes == nil { failed("processes", "Süreç listesi alınamadı.") }
+        if processes == nil { failed("processes", String(localized: "Process list unavailable.")) }
         previousTime = start
         return MetricSnapshot(date: Date(), cpu: cpu, memory: memory, disk: disk, network: network,
             battery: battery, system: system, processes: processes, developer: developer, containers: containers, hardware: hardware, bluetooth: bluetooth, audio: audio, issues: issues,

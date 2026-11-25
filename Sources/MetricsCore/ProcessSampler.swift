@@ -33,7 +33,7 @@ struct ProcessSampler {
             let shortName = withUnsafePointer(to: &raw.name) {
                 $0.withMemoryRebound(to: CChar.self, capacity: 64) { String(cString: $0) }
             }
-            let name = path.map { URL(fileURLWithPath: $0).lastPathComponent } ?? (shortName.isEmpty ? "Süreç \(pid)" : shortName)
+            let name = path.map { URL(fileURLWithPath: $0).lastPathComponent } ?? (shortName.isEmpty ? String(localized: "Process \(String(pid))") : shortName)
             if raw.usage_status != 0 { coverage.usageUnavailable += 1 }
             if raw.coalition_status != 0 { coverage.coalitionUnavailable += 1 }
             readings.append(RawProcessReading(identity: ProcessIdentity(pid: pid, startMicroseconds: raw.start_seconds * 1_000_000 + raw.start_microseconds),

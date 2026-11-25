@@ -4,12 +4,12 @@ public enum AlertKind: String, Codable, Sendable {
     case systemCPU, applicationCPU, memoryGrowth, swapUsage, network, disk
     public var title: String {
         switch self {
-        case .systemCPU: "Sistem CPU'su uzun süre yüksek"
-        case .applicationCPU: "Uygulama CPU'su uzun süre yüksek"
-        case .memoryGrowth: "Uygulama belleği büyüyor"
-        case .swapUsage: "Swap kullanımı"
-        case .network: "Ağ etkinliği uzun süre yüksek"
-        case .disk: "Disk etkinliği uzun süre yüksek"
+        case .systemCPU: String(localized: "System CPU high for a long time")
+        case .applicationCPU: String(localized: "App CPU high for a long time")
+        case .memoryGrowth: String(localized: "App memory growing")
+        case .swapUsage: String(localized: "Swap usage")
+        case .network: String(localized: "Network activity high for a long time")
+        case .disk: String(localized: "Disk activity high for a long time")
         }
     }
 }
@@ -26,6 +26,15 @@ public struct MonitorAlert: Codable, Sendable, Identifiable, Equatable {
     public var resolved: Date?
     public var interrupted = false
     public var active: Bool { resolved == nil }
+    /// System-wide alerts store a fixed target (older records in Turkish), so the label comes from the kind.
+    public var displayTarget: String {
+        switch kind {
+        case .systemCPU, .swapUsage: String(localized: "This Mac")
+        case .network: String(localized: "Physical network")
+        case .disk: String(localized: "Physical disk")
+        case .applicationCPU, .memoryGrowth: target
+        }
+    }
 }
 
 // Thresholds are explicit sustained observations, not health/leak diagnoses.
@@ -85,13 +94,13 @@ struct AlertEngine {
         observeSwap(swap, bytes: sample.values[.swap], uptime: sample.uptime, date: date)
         let system = key(.systemCPU, "system")
         observed.insert(system)
-        condition(system, kind: .systemCPU, target: "Bu Mac", value: sample.values[.cpu], threshold: policy.systemCPU,
+        condition(system, kind: .systemCPU, target: "This Mac", value: sample.values[.cpu], threshold: policy.systemCPU,
                   duration: policy.cpuDuration, elapsed: elapsed, date: date)
         let network = key(.network, "system"), disk = key(.disk, "system")
         observed.formUnion([network, disk])
-        condition(network, kind: .network, target: "Fiziksel ağ", value: combined(.download, .upload), threshold: policy.networkRate,
+        condition(network, kind: .network, target: "Physical network", value: combined(.download, .upload), threshold: policy.networkRate,
                   duration: policy.transferDuration, elapsed: elapsed, date: date)
-        condition(disk, kind: .disk, target: "Fiziksel disk", value: combined(.diskRead, .diskWrite), threshold: policy.diskRate,
+        condition(disk, kind: .disk, target: "Physical disk", value: combined(.diskRead, .diskWrite), threshold: policy.diskRate,
                   duration: policy.transferDuration, elapsed: elapsed, date: date)
         for app in sample.applications {
             let cpuKey = key(.applicationCPU, app.id)
@@ -155,7 +164,7 @@ struct AlertEngine {
         swapLevel = level
         // One current reading per crossed level, even if several GB changed between samples.
         resolve(key, at: date)
-        emit(key, kind: .swapUsage, target: "Bu Mac", value: bytes, started: date, at: date, usesCooldown: false)
+        emit(key, kind: .swapUsage, target: "This Mac", value: bytes, started: date, at: date, usesCooldown: false)
     }
     private mutating func emit(_ key: String, kind: AlertKind, target: String, value: Double, started: Date, at date: Date,
                                usesCooldown: Bool = true) {

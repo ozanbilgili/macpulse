@@ -96,24 +96,24 @@ struct GPUModelTracker {
     private struct Baseline { let driver, channel: UInt64; let counter: Int64; let unit: String; let time: Double }
     private var previous: Baseline?
     private var lastAdvance: Double?
-    private(set) var status = "GPU enerji başlangıç örneği"
-    mutating func reset() { previous = nil; lastAdvance = nil; status = "GPU enerji başlangıç örneği" }
+    private(set) var status = String(localized: "GPU energy baseline sample")
+    mutating func reset() { previous = nil; lastAdvance = nil; status = String(localized: "GPU energy baseline sample") }
     mutating func observe(driver: UInt64, channel: UInt64, counter: Int64, unit: String, uptime: Double, busy: Bool?) -> Double? {
-        guard counter >= 0 && uptime.isFinite else { reset(); status = "GPU enerji sayacı geçersiz"; return nil }
+        guard counter >= 0 && uptime.isFinite else { reset(); status = String(localized: "GPU energy counter invalid"); return nil }
         let current = Baseline(driver: driver, channel: channel, counter: counter, unit: unit, time: uptime)
         defer { previous = current }
         guard let previous, previous.driver == driver, previous.channel == channel, previous.unit == unit else {
-            lastAdvance = nil; status = "GPU enerji başlangıç örneği"; return nil
+            lastAdvance = nil; status = String(localized: "GPU energy baseline sample"); return nil
         }
         guard let watts = HardwareMath.energyWatts(previous: previous.counter, current: counter, unit: unit, seconds: uptime - previous.time) else {
-            lastAdvance = nil; status = "GPU enerji aralığı geçersiz; yeni sayaç alınıyor"; return nil
+            lastAdvance = nil; status = String(localized: "GPU energy interval invalid; taking a new counter"); return nil
         }
         if watts > 0 { lastAdvance = uptime }
         else if busy != false { lastAdvance = nil }
         guard let lastAdvance, uptime - lastAdvance <= 30 else {
-            status = "GPU enerji sayacı canlılığı doğrulanamıyor"; return nil
+            status = String(localized: "GPU energy counter liveness can't be verified"); return nil
         }
-        status = "GPU: IOReport enerji modeli"
+        status = String(localized: "GPU: IOReport energy model")
         return watts
     }
 }

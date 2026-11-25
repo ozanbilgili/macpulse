@@ -122,8 +122,14 @@ enum HistoryMath {
 }
 
 public enum HistoryRange: String, CaseIterable, Sendable, Identifiable {
-    case hour = "1 saat", day = "24 saat", week = "7 gün", month = "30 gün"
+    case hour, day, week, month
     public var id: Self { self }
+    public var label: String {
+        switch self {
+        case .hour: String(localized: "1 hour"); case .day: String(localized: "24 hours")
+        case .week: String(localized: "7 days"); case .month: String(localized: "30 days")
+        }
+    }
     public var daily: Bool { self == .week || self == .month }
     public var seconds: Double {
         switch self { case .hour: 3600; case .day: 86400; case .week: 7 * 86400; case .month: 30 * 86400 }

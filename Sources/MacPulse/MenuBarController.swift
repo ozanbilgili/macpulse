@@ -14,7 +14,7 @@ import MetricsCore
             button.target = self; button.action = #selector(toggle)
             button.font = .monospacedDigitSystemFont(ofSize: 11, weight: .medium)
             button.imagePosition = .imageLeading
-            button.setAccessibilityLabel("MacPulse hızlı panel")
+            button.setAccessibilityLabel(String(localized: "MacPulse quick panel"))
         }
         popover.behavior = .transient; popover.animates = false; popover.delegate = self
         let host = NSHostingController(rootView: MenuPanelRoot(store: store))
@@ -41,14 +41,14 @@ import MetricsCore
             _ = store.preferences.theme // Redraw dynamic label colors after a theme change.
             let description = MenuWidgetRenderer.description(widgets: widgets, store: store)
             item.button?.title = ""
-            item.button?.setAccessibilityValue(paused ? "Duraklatıldı" : description)
+            item.button?.setAccessibilityValue(paused ? String(localized: "Paused") : description)
             let image = !paused ? MenuWidgetRenderer.image(widgets: widgets, store: store) : nil
             item.button?.image = image ?? NSImage(systemSymbolName: paused ? "pause.circle" : "waveform.path.ecg", accessibilityDescription: "MacPulse")
             store.menuWidgetCount = widgets.count
             store.menuWidgetImageWidth = image?.size.width ?? 18
             store.menuWidgetBudget = MenuWidgetRenderer.widthBudget
             item.button?.image?.isTemplate = image == nil
-            item.button?.toolTip = paused ? "MacPulse · Duraklatıldı" : "MacPulse · " + description
+            item.button?.toolTip = "MacPulse · " + (paused ? String(localized: "Paused") : description)
         } onChange: { [weak self] in
             Task { @MainActor in self?.observeLabel() }
         }

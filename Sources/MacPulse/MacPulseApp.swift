@@ -60,7 +60,7 @@ import MetricsCore
         do {
             acceptance = try AcceptanceProfile.parse(CommandLine.arguments)
             try acceptance?.prepare()
-        } catch { fatalError("Geçersiz kabul profili; canlı kullanıcı verisi açılmadı.") }
+        } catch { fatalError(String(localized: "Invalid acceptance profile; live user data was not opened.")) }
         preferences = PreferencesStore(acceptance: acceptance)
         notifications = NotificationController(systemNotificationsAllowed: acceptance == nil)
         usage = AIUsageStore(isolated: acceptance != nil)
@@ -116,13 +116,13 @@ import MetricsCore
             historyReport = report; alerts = report.alerts; historyError = nil
         } catch {
             guard queryID == id else { return }
-            historyError = "Geçmiş kaydı okunamıyor. Canlı ölçümler devam ediyor."
+            historyError = String(localized: "History can't be read. Live measurements continue.")
         }
         historyLoading = false
     }
     private func interruptHistory() async {
         do { try await repository?.interrupt(); await refreshHistory() }
-        catch { historyError = "Geçmiş kaydı tamamlanamadı. Canlı ölçümler devam ediyor." }
+        catch { historyError = String(localized: "History record couldn't be completed. Live measurements continue.") }
     }
     func finish() async {
         guard !stopping else { await runTask?.value; return }
@@ -141,7 +141,7 @@ import MetricsCore
             let url = try acceptance?.historyURL ?? HistoryRepository.defaultURL()
             repository = try await Task.detached { try HistoryRepository(url: url) }.value
             await refreshHistory()
-        } catch { historyError = "Yerel geçmiş açılamadı; mevcut kayıt korundu. Canlı ölçümler devam ediyor." }
+        } catch { historyError = String(localized: "Local history couldn't be opened; existing records were kept. Live measurements continue.") }
         await notifications.restorePreference()
         while !Task.isCancelled && !stopping {
             if lifecycle.canSample {
@@ -172,7 +172,7 @@ import MetricsCore
                             lastHistoryRefresh = next.system.uptime
                             await refreshHistory()
                         }
-                    } catch { historyError = "Yerel geçmiş yazılamıyor. Canlı ölçümler devam ediyor." }
+                    } catch { historyError = String(localized: "Local history can't be written. Live measurements continue.") }
                 }
                 writeDiagnostics()
             }
@@ -229,8 +229,17 @@ import MetricsCore
 }
 
 enum MonitorTab: String, CaseIterable, Identifiable {
-    case overview = "Genel bakış", cpu = "CPU", memory = "Bellek", disk = "Disk", network = "Ağ", battery = "Pil", applications = "Uygulamalar", history = "Geçmiş", alerts = "Uyarılar", projects = "Projeler", containers = "Containerlar", hardware = "GPU ve enerji", bluetooth = "Bluetooth", audio = "Ses", usage = "AI Kullanımı"
+    case overview, cpu, memory, disk, network, battery, applications, history, alerts, projects, containers, hardware, bluetooth, audio, usage
     var id: Self { self }
+    var label: String {
+        switch self {
+        case .overview: String(localized: "Overview"); case .cpu: "CPU"; case .memory: String(localized: "Memory"); case .disk: String(localized: "Disk")
+        case .network: String(localized: "Network"); case .battery: String(localized: "Battery"); case .applications: String(localized: "Apps")
+        case .history: String(localized: "History"); case .alerts: String(localized: "Alerts"); case .projects: String(localized: "Projects")
+        case .containers: String(localized: "Containers"); case .hardware: String(localized: "GPU & Energy"); case .bluetooth: "Bluetooth"
+        case .audio: String(localized: "Audio"); case .usage: String(localized: "AI Usage")
+        }
+    }
     var icon: String {
         switch self { case .overview: "square.grid.2x2.fill"; case .cpu: "cpu"; case .memory: "memorychip"; case .disk: "internaldrive"; case .network: "network"; case .battery: "battery.100percent"; case .applications: "app.badge"; case .history: "clock.arrow.circlepath"; case .alerts: "bell"; case .projects: "hammer"; case .containers: "shippingbox"; case .hardware: "square.3.layers.3d"; case .bluetooth: "antenna.radiowaves.left.and.right"; case .audio: "speaker.wave.2"; case .usage: "chart.bar.xaxis" }
     }
@@ -291,17 +300,17 @@ enum MonitorTab: String, CaseIterable, Identifiable {
             PreferencesView(preferences: store.preferences)
                 .preferredColorScheme(store.preferences.colorScheme)
         }
-        Window("Menü çubuğu widget'ları", id: "menu-widgets") {
+        Window("Menu Bar Widgets", id: "menu-widgets") {
             MenuWidgetEditor(store: store).preferredColorScheme(store.preferences.colorScheme)
         }.defaultSize(width: 760, height: 720).windowResizability(.contentMinSize)
-        Window("Pil ve cihaz ayarları", id: "battery-settings") {
+        Window("Battery and Device Settings", id: "battery-settings") {
             DeviceBatterySettingsView(store: store.deviceBatteries, mainPreferences: store.preferences)
                 .preferredColorScheme(store.preferences.colorScheme)
         }.windowResizability(.contentSize)
-        WindowGroup("Cihaz pil geçmişi", id: "battery-history", for: String.self) { $deviceID in
+        WindowGroup("Device Battery History", id: "battery-history", for: String.self) { $deviceID in
             if let deviceID { DeviceBatteryHistoryView(store: store.deviceBatteries, deviceID: deviceID).preferredColorScheme(store.preferences.colorScheme) }
         }.windowResizability(.contentSize)
-        Window("MacPulse Hakkında", id: "about") {
+        Window("About MacPulse", id: "about") {
             AboutView().preferredColorScheme(store.preferences.colorScheme)
         }.windowResizability(.contentSize)
     }
@@ -311,20 +320,20 @@ struct MonitorCommands: Commands {
     let store: MonitorStore
     var body: some Commands {
         CommandGroup(replacing: .appInfo) {
-            Button("MacPulse Hakkında") { store.showAboutAction?() }
+            Button("About MacPulse") { store.showAboutAction?() }
                 .keyboardShortcut("h", modifiers: [.command, .shift])
         }
         CommandGroup(replacing: .newItem) {
-            Button("Ana pencereyi aç") { store.showMain() }.keyboardShortcut("o")
+            Button("Open Main Window") { store.showMain() }.keyboardShortcut("o")
         }
-        CommandMenu("İzleme") {
-            Button("Menü çubuğu widget'larını düzenle") { store.showWidgets() }
+        CommandMenu("Monitoring") {
+            Button("Edit Menu Bar Widgets") { store.showWidgets() }
                 .keyboardShortcut("w", modifiers: [.command, .shift])
-            Button("AI Kullanımını aç") { store.showUsage() }
+            Button("Open AI Usage") { store.showUsage() }
                 .keyboardShortcut("u", modifiers: [.command, .shift])
-            Button("Hızlı paneli aç") { store.togglePanelAction?() }
+            Button("Open Quick Panel") { store.togglePanelAction?() }
                 .keyboardShortcut("m", modifiers: [.command, .shift])
-            Button(store.paused ? "İzlemeyi sürdür" : "İzlemeyi duraklat") { store.paused.toggle() }
+            Button(store.paused ? "Resume monitoring" : "Pause monitoring") { store.paused.toggle() }
                 .keyboardShortcut("p", modifiers: [.command, .shift])
         }
     }

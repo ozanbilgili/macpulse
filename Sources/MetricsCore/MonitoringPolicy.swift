@@ -3,7 +3,7 @@ import Foundation
 public enum MonitorTheme: String, CaseIterable, Codable, Sendable {
     case system, dark, light
     public var label: String {
-        switch self { case .system: "Sistem"; case .dark: "Koyu"; case .light: "Açık" }
+        switch self { case .system: String(localized: "System"); case .dark: String(localized: "Dark"); case .light: String(localized: "Light") }
     }
 }
 
@@ -11,19 +11,19 @@ public enum MenuMetric: String, CaseIterable, Codable, Sendable, Identifiable {
     case cpu, gpu, memory, network, disk, battery
     public var id: Self { self }
     public var label: String {
-        switch self { case .cpu: "CPU"; case .gpu: "GPU"; case .memory: "Bellek"; case .network: "Ağ indirme"; case .disk: "Disk doluluğu"; case .battery: "Pil" }
+        switch self { case .cpu: "CPU"; case .gpu: "GPU"; case .memory: String(localized: "Memory"); case .network: String(localized: "Network download"); case .disk: String(localized: "Disk usage"); case .battery: String(localized: "Battery") }
     }
 }
 
 public enum AIUsageMenuStyle: String, CaseIterable, Codable, Sendable {
     case bars, percent, both
-    public var label: String { switch self { case .bars: "Çubuk"; case .percent: "Yüzde"; case .both: "İkisi" } }
+    public var label: String { switch self { case .bars: String(localized: "Bars"); case .percent: String(localized: "Percentage"); case .both: String(localized: "Both") } }
 }
 
 public enum MenuWidgetSelection: String, CaseIterable, Codable, Sendable {
     case manual, topFourFiveHour
     public var label: String {
-        switch self { case .manual: "Seçtiğim widget'lar"; case .topFourFiveHour: "AI · En yüksek 4 (5 saat)" }
+        switch self { case .manual: String(localized: "Widgets I choose"); case .topFourFiveHour: String(localized: "AI · Top 4 (5-hour)") }
     }
 }
 

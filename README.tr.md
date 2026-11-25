@@ -172,7 +172,7 @@ Ayrıntılar [docs/PRIVACY.md](docs/PRIVACY.md) dosyasında.
 
 MacPulse her gün kullandığım kişisel bir proje. Denemeden önce şunları oku:
 
-- **Arayüz Türkçe.** İngilizce yerelleştirme henüz yok; katkılara açığız.
+- **Arayüz İngilizce ve Türkçe.** MacPulse macOS dil tercihini izler (Türkçe tercih edildiğinde Türkçe, diğer dillerde İngilizce); sayı, yüzde ve tarih biçimleri bölge ayarına uyar. Bazı belgeler yalnız Türkçe. Yeni çevirilere açığız: metinler `Sources/MacPulse/Resources/Localizable.xcstrings` dosyasındadır, `python3 Scripts/localization.py check` denetler.
 - **Tek bir makinede test edildi** (Apple M4 Pro, macOS 27). Intel Mac'ler ve eski macOS sürümleri denenmedi.
 - **SMC ve IOReport belgelenmemiş Apple arayüzleridir.** Başka donanımda bazı sensörler `—` gösterebilir. Fan kontrolü ya da yönetici yardımcısı yoktur.
 - **AI kullanımı, resmî CLI'ların kullandığı belgelenmemiş sağlayıcı uç noktalarına dayanır.** Bu uç noktalar haber vermeden değişebilir; o durumda uygulama güncellenene kadar kartlar `—` gösterir.

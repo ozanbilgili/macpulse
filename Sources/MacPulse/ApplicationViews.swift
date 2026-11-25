@@ -32,8 +32,11 @@ struct ApplicationIcon: View {
 }
 
 enum ApplicationScope: String, CaseIterable, Identifiable {
-    case all = "Tümü", applications = "Uygulamalar", independent = "Bağımsız"
+    case all, applications, independent
     var id: Self { self }
+    var label: String {
+        switch self { case .all: String(localized: "All"); case .applications: String(localized: "Apps"); case .independent: String(localized: "Standalone") }
+    }
 }
 
 struct GroupSelection: Identifiable {
@@ -43,7 +46,7 @@ struct GroupSelection: Identifiable {
 enum ApplicationFormat {
     static func cpu(_ value: Double?, partial: Bool = false) -> String {
         guard let value else { return "—" }
-        return (partial ? "≥ " : "") + MetricFormat.number(value, digits: 1) + "%"
+        return (partial ? "≥ " : "") + LocalizedFormat.percent(value, digits: 1)
     }
     static func memory(_ value: UInt64?, partial: Bool = false) -> String {
         guard value != nil else { return "—" }
@@ -55,7 +58,7 @@ struct ApplicationListView: View {
     let snapshot: ProcessSnapshot?
     var initialSort: ProcessSort = .memory
     var limit: Int? = nil
-    var title = "Uygulamalar ve süreçler"
+    var title = String(localized: "Apps and processes")
     let select: (ApplicationUsage) -> Void
     @State private var search = ""
     @State private var scope: ApplicationScope = .all
@@ -79,7 +82,7 @@ struct ApplicationListView: View {
                 Text(title).font(.system(size: 21, weight: .semibold, design: .rounded))
                 Spacer()
                 if let snapshot {
-                    Text("\(snapshot.applicationCount) uygulama · \(snapshot.processCount) süreç")
+                    Text("\(snapshot.applicationCount) apps · \(snapshot.processCount) processes")
                         .font(.system(size: 12)).foregroundStyle(Palette.secondary)
                 }
             }
@@ -87,33 +90,33 @@ struct ApplicationListView: View {
                 HStack(spacing: 16) {
                     HStack(spacing: 8) {
                         Image(systemName: "magnifyingglass").foregroundStyle(Palette.secondary)
-                        TextField("Uygulama, süreç veya PID ara", text: $search).textFieldStyle(.plain)
-                            .accessibilityLabel("Uygulama veya süreç ara")
+                        TextField("Search apps, processes or PID", text: $search).textFieldStyle(.plain)
+                            .accessibilityLabel("Search apps or processes")
                     }.font(.system(size: 13)).padding(10).frame(maxWidth: 360)
                         .background(Palette.card, in: RoundedRectangle(cornerRadius: 10))
-                    Picker("Kapsam", selection: $scope) {
-                        ForEach(ApplicationScope.allCases) { value in Text(value.rawValue).tag(value) }
+                    Picker("Scope", selection: $scope) {
+                        ForEach(ApplicationScope.allCases) { value in Text(value.label).tag(value) }
                     }.pickerStyle(.segmented).frame(width: 280)
                     Spacer()
-                    Picker("Sıralama", selection: $sort) {
-                        ForEach(ProcessSort.allCases) { value in Text(value.rawValue).tag(value) }
+                    Picker("Sort", selection: $sort) {
+                        ForEach(ProcessSort.allCases) { value in Text(value.label).tag(value) }
                     }.frame(width: 150)
                 }
             }
-            Text("CPU: bir çekirdek %100 · Bellek: uygulamaya yüklenen fiziksel bellek")
+            Text("CPU: 100% = one core · Memory: physical memory charged to the app")
                 .font(.system(size: 11)).foregroundStyle(Palette.secondary)
             VStack(spacing: 0) {
                 HStack {
-                    Text("Uygulama / grup")
+                    Text("App / group")
                     Spacer()
-                    Text("Süreç").frame(width: 65, alignment: .trailing)
+                    Text("Process").frame(width: 65, alignment: .trailing)
                     Text("CPU").frame(width: 110, alignment: .trailing)
-                    Text("Bellek").frame(width: 125, alignment: .trailing)
+                    Text("Memory").frame(width: 125, alignment: .trailing)
                     Color.clear.frame(width: 14)
                 }.font(.system(size: 11, weight: .medium)).foregroundStyle(Palette.secondary).padding(.horizontal, 18).padding(.vertical, 13)
                 Rectangle().fill(Color.primary.opacity(0.06)).frame(height: 1)
                 if rows.isEmpty {
-                    Text(snapshot == nil ? "Süreç listesi alınamıyor" : "Bu filtreye uyan süreç bulunamadı")
+                    Text(snapshot == nil ? "Process list unavailable" : "No processes match this filter")
                         .font(.system(size: 13)).foregroundStyle(Palette.secondary).frame(maxWidth: .infinity).padding(32)
                 }
                 LazyVStack(spacing: 0) {
@@ -123,7 +126,7 @@ struct ApplicationListView: View {
                                 ApplicationIcon(group: group)
                                 VStack(alignment: .leading, spacing: 4) {
                                     Text(group.name).font(.system(size: 13, weight: .medium)).lineLimit(1)
-                                    Text(group.kind == .application ? "Yardımcı süreçler dahil" : "Bağımsız süreç grubu")
+                                    Text(group.kind == .application ? "Including helper processes" : "Standalone process group")
                                         .font(.system(size: 10)).foregroundStyle(Palette.secondary)
                                 }
                                 Spacer(minLength: 12)
@@ -134,7 +137,7 @@ struct ApplicationListView: View {
                                 Image(systemName: "chevron.right").font(.system(size: 10)).foregroundStyle(Palette.secondary).frame(width: 14)
                             }.font(.system(size: 12, weight: .medium)).monospacedDigit()
                                 .padding(.horizontal, 18).padding(.vertical, 12).contentShape(Rectangle())
-                        }.buttonStyle(.plain).accessibilityLabel("\(group.name), \(group.processes.count) süreç, CPU \(ApplicationFormat.cpu(group.cpuPercent, partial: group.cpuIsPartial)), bellek \(ApplicationFormat.memory(group.footprint, partial: group.memoryIsPartial)), süreç ayrıntılarını aç")
+                        }.buttonStyle(.plain).accessibilityLabel("\(group.name), \(group.processes.count) processes, CPU \(ApplicationFormat.cpu(group.cpuPercent, partial: group.cpuIsPartial)), memory \(ApplicationFormat.memory(group.footprint, partial: group.memoryIsPartial)), open process details")
                         Rectangle().fill(Color.primary.opacity(0.035)).frame(height: 1).padding(.leading, 60)
                     }
                 }
@@ -142,7 +145,7 @@ struct ApplicationListView: View {
             if let snapshot {
                 coverage(snapshot)
             }
-            Text("Bellek yükü ve RSS farklı ölçümlerdir. Paylaşılan ve sıkıştırılmış bellek nedeniyle süreç toplamı, sistemin kullanılan RAM değeriyle birebir örtüşmez. ≥ işareti yalnız ölçülebilen süreçlerin ara toplamını gösterir.")
+            Text("Memory footprint and RSS are different measurements. Because of shared and compressed memory, the process total doesn't match the system's used RAM exactly. The ≥ sign marks a subtotal of only the processes that could be measured.")
                 .font(.system(size: 11)).foregroundStyle(Palette.secondary).fixedSize(horizontal: false, vertical: true)
         }.onAppear { sort = initialSort }
     }
@@ -150,10 +153,10 @@ struct ApplicationListView: View {
     private func coverage(_ snapshot: ProcessSnapshot) -> some View {
         let inaccessible = snapshot.coverage.otherUsers + snapshot.coverage.metadataUnavailable
         return HStack(spacing: 20) {
-            Label("\(snapshot.memoryMeasuredCount)/\(snapshot.processCount) süreç ölçüldü", systemImage: "checkmark.circle")
-            Text("\(inaccessible) süreç kapsam dışında")
-            Text("\(snapshot.independentCount) süreç bağımsız")
-            if snapshot.coverage.truncated { Text("Liste kısmi").foregroundStyle(Palette.disk) }
+            Label("\(snapshot.memoryMeasuredCount)/\(snapshot.processCount) processes measured", systemImage: "checkmark.circle")
+            Text("\(inaccessible) processes out of scope")
+            Text("\(snapshot.independentCount) standalone processes")
+            if snapshot.coverage.truncated { Text("Partial list").foregroundStyle(Palette.disk) }
         }.font(.system(size: 11)).foregroundStyle(Palette.secondary)
     }
 }
@@ -167,10 +170,10 @@ struct TopApplicationsView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack {
-                Label(sort == .cpu ? "CPU kullananlar" : "Bellek kullananlar", systemImage: sort == .cpu ? "cpu" : "memorychip")
+                Label(sort == .cpu ? "Top CPU" : "Top memory", systemImage: sort == .cpu ? "cpu" : "memorychip")
                     .font(.system(size: 12, weight: .semibold)).foregroundStyle(sort == .cpu ? Palette.cpu : Palette.memory)
                 Spacer()
-                Button("Tümü", action: showAll).font(.system(size: 11)).buttonStyle(.plain).foregroundStyle(Palette.accent)
+                Button("All", action: showAll).font(.system(size: 11)).buttonStyle(.plain).foregroundStyle(Palette.accent)
             }
             ForEach(rows) { group in
                 Button { select(group) } label: {
@@ -182,7 +185,7 @@ struct TopApplicationsView: View {
                         Text(sort == .cpu ? ApplicationFormat.cpu(group.cpuPercent, partial: group.cpuIsPartial) : ApplicationFormat.memory(group.footprint, partial: group.memoryIsPartial))
                             .font(.system(size: 12, weight: .medium)).monospacedDigit()
                     }.contentShape(Rectangle())
-                }.buttonStyle(.plain).accessibilityLabel("\(group.name), süreç ayrıntılarını aç")
+                }.buttonStyle(.plain).accessibilityLabel("\(group.name), open process details")
             }
         }.padding(18).frame(maxWidth: .infinity, alignment: .leading).background(Palette.card, in: RoundedRectangle(cornerRadius: 16))
     }
@@ -204,17 +207,17 @@ struct ProcessDetailSheet: View {
                 if let group { ApplicationIcon(group: group, size: 40) }
                 VStack(alignment: .leading, spacing: 5) {
                     Text(selection.name).font(.system(size: 24, weight: .semibold, design: .rounded))
-                    Text(group.map { "\($0.processes.count) süreç · canlı ölçümler" } ?? "Bu grup artık çalışmıyor")
+                    Text(group.map { "\($0.processes.count) processes · live measurements" } ?? "This group is no longer running")
                         .font(.system(size: 12)).foregroundStyle(Palette.secondary)
                 }
                 Spacer()
-                Button("Kapat") { dismiss() }.keyboardShortcut(.cancelAction)
+                Button("Close") { dismiss() }.keyboardShortcut(.cancelAction)
             }
             if let group {
-                FactRow(facts: [StatFact(title: "CPU · bir çekirdek %100", value: ApplicationFormat.cpu(group.cpuPercent, partial: group.cpuIsPartial)),
-                    StatFact(title: "Bellek yükü", value: ApplicationFormat.memory(group.footprint, partial: group.memoryIsPartial)),
-                    StatFact(title: "RSS toplamı", value: ApplicationFormat.memory(group.resident, partial: group.memoryIsPartial)),
-                    StatFact(title: "Ölçülen süreç", value: "\(group.memoryMeasuredCount)/\(group.processes.count)")])
+                FactRow(facts: [StatFact(title: String(localized: "CPU · one core = \(LocalizedFormat.percent(100))"), value: ApplicationFormat.cpu(group.cpuPercent, partial: group.cpuIsPartial)),
+                    StatFact(title: String(localized: "Memory footprint"), value: ApplicationFormat.memory(group.footprint, partial: group.memoryIsPartial)),
+                    StatFact(title: String(localized: "RSS total"), value: ApplicationFormat.memory(group.resident, partial: group.memoryIsPartial)),
+                    StatFact(title: String(localized: "Measured processes"), value: "\(group.memoryMeasuredCount)/\(group.processes.count)")])
             }
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 0) {
@@ -229,22 +232,22 @@ struct ProcessDetailSheet: View {
                             }.font(.system(size: 12)).monospacedDigit()
                             HStack(spacing: 14) {
                                 Text("PID \(process.identity.pid)")
-                                Text("Ebeveyn \(process.parentPID)")
+                                Text("Parent \(process.parentPID)")
                                 Text(process.attribution.label)
                                 Spacer()
-                                Text("Başlangıç \(process.identity.startDate.formatted(date: .abbreviated, time: .shortened))")
+                                Text("Started \(process.identity.startDate.formatted(date: .abbreviated, time: .shortened))")
                             }.font(.system(size: 10)).foregroundStyle(Palette.secondary)
                             if process.footprint == nil {
-                                Text("Bu sürecin kaynak ölçümüne erişilemiyor.").font(.system(size: 10)).foregroundStyle(Palette.disk)
+                                Text("This process's resource usage can't be read.").font(.system(size: 10)).foregroundStyle(Palette.disk)
                             } else if process.cpuPercent == nil {
-                                Text("CPU hızı için yeni bir başlangıç ölçümü alınıyor.").font(.system(size: 10)).foregroundStyle(Palette.secondary)
+                                Text("Taking a new baseline sample for CPU rate.").font(.system(size: 10)).foregroundStyle(Palette.secondary)
                             }
                         }.padding(.vertical, 14)
                         Divider().overlay(Color.primary.opacity(0.04))
                     }
                 }
             }
-            Text("Bellek yükü sıkıştırılmış bellek dahil uygulamanın yükünü; RSS ise o anda RAM'de bulunan sayfaları gösterir. Süreç kimliği PID ve başlangıç zamanı ile takip edilir.")
+            Text("Memory footprint is the app's load including compressed memory; RSS shows the pages in RAM right now. Processes are tracked by PID and start time.")
                 .font(.system(size: 11)).foregroundStyle(Palette.secondary).fixedSize(horizontal: false, vertical: true)
         }.padding(26).frame(width: 900, height: 620).background(Palette.background).foregroundStyle(.primary)
     }

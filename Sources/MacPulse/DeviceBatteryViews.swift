@@ -16,20 +16,20 @@ struct DeviceBatteryDashboard: View {
         VStack(alignment: .leading, spacing: 24) {
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 5) {
-                    Text("Pil").font(.title2.weight(.semibold))
-                    Text(batteries.isPaused ? "İzleme duraklatıldı · son ölçümler" : "Mac’in ve bağlı cihazların pil durumu")
+                    Text("Battery").font(.title2.weight(.semibold))
+                    Text(batteries.isPaused ? "Monitoring paused · last readings" : "Battery status of your Mac and connected devices")
                         .font(.callout).foregroundStyle(Palette.secondary)
                 }
                 Spacer()
                 BatteryRefreshButton(store: store)
-                Button("Cihaz ayarları") { store.showBatterySettings() }
-                Button("Widget’lar") { store.showWidgets() }
+                Button("Device settings") { store.showBatterySettings() }
+                Button("Widgets") { store.showWidgets() }
             }
 
             if let mac { MacBatteryOverview(store: store, device: mac) }
 
             VStack(alignment: .leading, spacing: 12) {
-                BatterySectionHeading(title: "Bağlı cihazlar", count: deviceCount(liveGroups))
+                BatterySectionHeading(title: String(localized: "Connected devices"), count: deviceCount(liveGroups))
                 if liveGroups.isEmpty {
                     BatteryEmptyState(store: store)
                 } else {
@@ -41,9 +41,9 @@ struct DeviceBatteryDashboard: View {
 
             if !offlineGroups.isEmpty {
                 VStack(alignment: .leading, spacing: 14) {
-                    BatteryDisclosure(title: "Son görülen cihazlar", count: deviceCount(offlineGroups), expanded: $showOffline)
+                    BatteryDisclosure(title: String(localized: "Recently seen devices"), count: deviceCount(offlineGroups), expanded: $showOffline)
                     if showOffline {
-                        Text(batteries.isPaused ? "İzleme sürdürülene kadar bu değerler güncellenmez." : "Bu cihazlar şu an bağlı değil. Yüzdeler son kayıtlı ölçüme aittir.")
+                        Text(batteries.isPaused ? "These values won't update until monitoring resumes." : "These devices aren't connected right now. Percentages are from the last recorded reading.")
                             .font(.callout).foregroundStyle(Palette.secondary)
                         LazyVGrid(columns: columns, alignment: .leading, spacing: 16) {
                             ForEach(offlineGroups) { group in BatteryDeviceCard(store: store, group: group) }
@@ -55,7 +55,7 @@ struct DeviceBatteryDashboard: View {
 
             if mac != nil, let snapshot = store.snapshot {
                 VStack(alignment: .leading, spacing: 14) {
-                    BatteryDisclosure(title: "Mac pil ayrıntıları ve grafik", expanded: $showDetails)
+                    BatteryDisclosure(title: String(localized: "Mac battery details and chart"), expanded: $showDetails)
                     if showDetails { DetailView(tab: .battery, snapshot: snapshot, history: store.history) }
                 }
             }
@@ -65,13 +65,13 @@ struct DeviceBatteryDashboard: View {
                     BatteryRefreshStatus(store: store)
                     Spacer()
                     Button { showConnections.toggle() } label: {
-                        Label("Bağlantı bilgileri", systemImage: showConnections ? "chevron.up" : "info.circle")
+                        Label("Connection details", systemImage: showConnections ? "chevron.up" : "info.circle")
                     }.buttonStyle(.plain).foregroundStyle(Palette.secondary)
                 }.font(.caption)
                 if showConnections {
-                    Text("Bluetooth pil seviyesi macOS kaydından gelir; cihazın sensör zamanı doğrulanamaz. Logitech pili HID++ ile okunur. Mobil güç değeri bataryanın net akışıdır.")
+                    Text("Bluetooth battery levels come from the macOS record; the device's sensor time can't be verified. Logitech batteries are read over HID++. Mobile power is the battery's net flow.")
                     if let migration = batteries.migration, !migration.files.isEmpty {
-                        Label("PilBar’dan \(migration.deviceCount) cihaz ve \(migration.historyPointCount) ölçüm aktarıldı", systemImage: "checkmark.circle")
+                        Label("Imported \(migration.deviceCount) devices and \(migration.historyPointCount) readings from PilBar", systemImage: "checkmark.circle")
                     }
                     ForEach(batteries.issues, id: \.self) { Label($0, systemImage: "info.circle") }
                 }
@@ -91,7 +91,7 @@ private struct MacBatteryOverview: View {
             VStack(alignment: .leading, spacing: 16) {
                 HStack(spacing: 9) {
                     Image(systemName: "laptopcomputer").foregroundStyle(Palette.secondary)
-                    Text("Bu Mac").font(.headline)
+                    Text("This Mac").font(.headline)
                     Text(store.deviceBatteries.name(device)).font(.callout).foregroundStyle(Palette.secondary).lineLimit(1)
                     Spacer(minLength: 0)
                     BatteryDeviceMenu(store: store, device: device)
@@ -105,17 +105,17 @@ private struct MacBatteryOverview: View {
                         }
                         BatteryLevelBar(level: status.level, charging: status.charging, live: status.live).frame(height: 7)
                     }.contentShape(Rectangle())
-                }.buttonStyle(.plain).help(status.tooltip).accessibilityLabel("Bu Mac, pil geçmişini aç").accessibilityValue(status.accessibilityStatus)
+                }.buttonStyle(.plain).help(status.tooltip).accessibilityLabel("This Mac, open battery history").accessibilityValue(status.accessibilityStatus)
             }.frame(maxWidth: .infinity, alignment: .leading)
             Divider().frame(height: 102)
             VStack(alignment: .leading, spacing: 18) {
-                BatteryFact(title: "Güç kaynağı", value: metrics.map { $0.onAC ? "Adaptör" : "Pil" } ?? "—", symbol: "powerplug")
-                BatteryFact(title: metrics?.charging == true ? "Tam doluma kalan" : "Tahmini kalan süre",
-                            value: metrics?.minutesRemaining.flatMap { $0 >= 0 ? MetricFormat.duration(Double($0) * 60) : nil } ?? "Hesaplanmıyor", symbol: "clock")
+                BatteryFact(title: String(localized: "Power source"), value: metrics.map { $0.onAC ? String(localized: "Adapter") : String(localized: "Battery") } ?? "—", symbol: "powerplug")
+                BatteryFact(title: metrics?.charging == true ? String(localized: "Until full") : String(localized: "Estimated time remaining"),
+                            value: metrics?.minutesRemaining.flatMap { $0 >= 0 ? MetricFormat.duration(Double($0) * 60) : nil } ?? String(localized: "Not calculated"), symbol: "clock")
             }.frame(width: 175, alignment: .leading)
             VStack(alignment: .leading, spacing: 18) {
-                BatteryFact(title: "Düşük güç modu", value: metrics.map { $0.lowPowerMode ? "Açık" : "Kapalı" } ?? "—", symbol: "leaf")
-                BatteryFact(title: "Son ölçüm", value: device.measuredAt.map { $0.formatted(date: .omitted, time: .shortened) } ?? "—", symbol: "waveform.path")
+                BatteryFact(title: String(localized: "Low Power Mode"), value: metrics.map { $0.lowPowerMode ? String(localized: "On") : String(localized: "Off") } ?? "—", symbol: "leaf")
+                BatteryFact(title: String(localized: "Last measured"), value: device.measuredAt.map { $0.formatted(date: .omitted, time: .shortened) } ?? "—", symbol: "waveform.path")
             }.frame(width: 160, alignment: .leading)
         }
         .padding(24).background(Palette.card, in: RoundedRectangle(cornerRadius: 18))
@@ -151,15 +151,15 @@ private struct BatteryDeviceCard: View {
                     HStack(alignment: .firstTextBaseline) {
                         Text(status.percentage).font(.system(size: 32, weight: .semibold, design: .rounded)).monospacedDigit()
                         Spacer()
-                        if status.charging { Label("Şarj oluyor", systemImage: "bolt.fill").font(.caption).foregroundStyle(Palette.battery) }
+                        if status.charging { Label("Charging", systemImage: "bolt.fill").font(.caption).foregroundStyle(Palette.battery) }
                     }
                     BatteryLevelBar(level: status.level, charging: status.charging, live: status.live).frame(height: 5)
-                    Text(status.charging ? group.primary.connection?.label ?? "Bağlı" : status.subtitle)
+                    Text(status.charging ? group.primary.connection?.label ?? String(localized: "Connected") : status.subtitle)
                         .font(.system(size: 12)).foregroundStyle(Palette.secondary).lineLimit(2)
                     if let power = status.power { Text(power.powerText).font(.caption).foregroundStyle(Palette.secondary).help(power.powerHelp) }
                 }.frame(maxWidth: .infinity, alignment: .leading).contentShape(Rectangle())
             }.buttonStyle(.plain).help(status.tooltip)
-                .accessibilityLabel(store.deviceBatteries.name(group.primary) + ", pil geçmişini aç").accessibilityValue(status.accessibilityStatus)
+                .accessibilityLabel(String(localized: "\(store.deviceBatteries.name(group.primary)), open battery history")).accessibilityValue(status.accessibilityStatus)
             ForEach(group.devices.filter { $0.id != group.primary.id }) { device in
                 Divider().opacity(0.5)
                 BatteryCompanionRow(store: store, device: device)
@@ -180,14 +180,14 @@ private struct BatteryCompanionRow: View {
             HStack(spacing: 8) {
                 Image(systemName: batteryGlyph(device)).foregroundStyle(Palette.secondary)
                 VStack(alignment: .leading, spacing: 3) {
-                    Text(device.id.hasSuffix(":case") ? "Şarj kutusu" : store.deviceBatteries.name(device))
+                    Text(device.id.hasSuffix(":case") ? String(localized: "Charging case") : store.deviceBatteries.name(device))
                     Text(status.subtitle).font(.caption).foregroundStyle(Palette.secondary).lineLimit(2)
                 }
                 Spacer(minLength: 0)
                 Text(status.percentage).fontWeight(.semibold).monospacedDigit()
             }.font(.system(size: 12)).contentShape(Rectangle())
         }.buttonStyle(.plain).help(status.tooltip)
-            .accessibilityLabel(store.deviceBatteries.name(device) + ", pil geçmişini aç").accessibilityValue(status.accessibilityStatus)
+            .accessibilityLabel(String(localized: "\(store.deviceBatteries.name(device)), open battery history")).accessibilityValue(status.accessibilityStatus)
             .contextMenu { batteryContextMenu(device, store: store) }
     }
 }
@@ -215,11 +215,11 @@ struct DeviceBatteryQuickView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
-                Text(batteries.isPaused ? "Son pil ölçümleri" : "Güncel piller").font(.callout.weight(.semibold))
+                Text(batteries.isPaused ? "Last battery readings" : "Current batteries").font(.callout.weight(.semibold))
                 Spacer()
                 BatteryRefreshButton(store: store)
                 Button { store.showBatterySettings() } label: { Image(systemName: "slider.horizontal.3").frame(width: 28, height: 28).contentShape(Rectangle()) }
-                    .buttonStyle(.plain).help("Cihaz ayarları").accessibilityLabel("Cihaz ayarları").accessibilityIdentifier("panel-settings")
+                    .buttonStyle(.plain).help("Device settings").accessibilityLabel("Device settings").accessibilityIdentifier("panel-settings")
             }
             ScrollView(.vertical) {
                 VStack(alignment: .leading, spacing: 0) {
@@ -227,7 +227,7 @@ struct DeviceBatteryQuickView: View {
                     if batteries.displayedDevices.isEmpty { BatteryEmptyState(store: store).padding(.vertical, 16) }
                     if !batteries.offlineGroups.isEmpty {
                         if !batteries.liveGroups.isEmpty { Divider().padding(.vertical, 8) }
-                        BatteryDisclosure(title: "Son görülen cihazlar", count: deviceCount(batteries.offlineGroups), expanded: $showOffline)
+                        BatteryDisclosure(title: String(localized: "Recently seen devices"), count: deviceCount(batteries.offlineGroups), expanded: $showOffline)
                             .padding(.horizontal, 12).padding(.vertical, 12)
                         if showOffline {
                             ForEach(batteries.offlineGroups) { group in menuGroup(group) }
@@ -253,8 +253,8 @@ struct DeviceBatteryQuickView: View {
                         Image(systemName: batteries.expandedGroups.contains(group.id) ? "chevron.down" : "chevron.right")
                             .font(.system(size: 10, weight: .medium)).frame(width: 28, height: 36).contentShape(Rectangle())
                     }.buttonStyle(.plain).foregroundStyle(Palette.secondary)
-                        .accessibilityLabel(batteries.name(group.primary) + " kutu ayrıntıları")
-                        .accessibilityValue(batteries.expandedGroups.contains(group.id) ? "Açık" : "Kapalı")
+                        .accessibilityLabel(String(localized: "\(batteries.name(group.primary)) case details"))
+                        .accessibilityValue(batteries.expandedGroups.contains(group.id) ? "Expanded" : "Collapsed")
                 } else {
                     Color.clear.frame(width: 28).accessibilityHidden(true)
                 }
@@ -285,7 +285,7 @@ private struct DeviceBatteryRow: View {
                 DeviceBatteryGlyph(device: device, live: status.live)
                 VStack(alignment: .leading, spacing: 4) {
                     Text(store.deviceBatteries.name(device)).font(.system(size: 13, weight: .medium)).lineLimit(1).truncationMode(.middle)
-                    Text(companionStatus.map { status.subtitle + " · Kutu " + $0.percentage + ($0.live ? "" : " (son ölçüm)") } ?? status.power?.powerText ?? status.subtitle)
+                    Text(companionStatus.map { $0.live ? String(localized: "\(status.subtitle) · Case \($0.percentage)") : String(localized: "\(status.subtitle) · Case \($0.percentage) (last reading)") } ?? status.power?.powerText ?? status.subtitle)
                         .font(.system(size: 11)).foregroundStyle(Palette.secondary).lineLimit(1).truncationMode(.tail)
                 }.frame(maxWidth: .infinity, alignment: .leading)
                 VStack(alignment: .trailing, spacing: 6) {
@@ -301,11 +301,11 @@ private struct DeviceBatteryRow: View {
             .contentShape(Rectangle()).background(.primary.opacity(hovered ? 0.045 : 0), in: RoundedRectangle(cornerRadius: 8))
         }
         .buttonStyle(.plain).onHover { hovered = $0 }.help(status.tooltip)
-        .accessibilityLabel(store.deviceBatteries.name(device) + ", pil geçmişini aç")
-        .accessibilityValue(status.accessibilityStatus + (companionStatus.map { ", kutu " + $0.accessibilityStatus } ?? ""))
+        .accessibilityLabel(String(localized: "\(store.deviceBatteries.name(device)), open battery history"))
+        .accessibilityValue(status.accessibilityStatus + (companionStatus.map { ", " + String(localized: "case \($0.accessibilityStatus)") } ?? ""))
         .contextMenu {
             batteryContextMenu(device, store: store)
-            if let companion { Button("Kutu pil geçmişi") { store.showBatteryHistory(companion.id) } }
+            if let companion { Button("Case battery history") { store.showBatteryHistory(companion.id) } }
         }
     }
 }
@@ -323,28 +323,31 @@ private struct DeviceBatteryRow: View {
               (-2..<Double(max(20, store.effectiveInterval * 3))).contains(store.deviceBatteries.now.timeIntervalSince(snapshot.date)) else { return nil }
         return snapshot.battery
     }
-    var percentage: String { level.map { (device.approximate == true ? "≈" : "") + "\($0)%" } ?? "—" }
+    var percentage: String { level.map { (device.approximate == true ? "≈" : "") + LocalizedFormat.percent($0) } ?? "—" }
     var subtitle: String {
         if !live {
-            return device.measuredAt.map { "Son ölçüm " + $0.formatted(date: Calendar.current.isDateInToday($0) ? .omitted : .abbreviated, time: .shortened) } ?? "Ölçüm zamanı bilinmiyor"
+            return device.measuredAt.map { String(localized: "Last measured \($0.formatted(date: Calendar.current.isDateInToday($0) ? .omitted : .abbreviated, time: .shortened))") } ?? String(localized: "Measurement time unknown")
         }
-        if level == nil { return "Pil bilgisi bekleniyor" }
+        if level == nil { return String(localized: "Waiting for battery info") }
         if let macMetrics { return macMetrics.stateLabel }
-        if charging { return "Şarj oluyor" }
-        if let level, level <= (store.deviceBatteries.preferences.options(for: device.id).lowThreshold ?? store.deviceBatteries.preferences.lowThreshold) { return "Düşük pil" }
-        return device.connection == .internalBattery ? "Pille çalışıyor" : device.connection?.label ?? "Bağlı"
+        if charging { return String(localized: "Charging") }
+        if let level, level <= (store.deviceBatteries.preferences.options(for: device.id).lowThreshold ?? store.deviceBatteries.preferences.lowThreshold) { return String(localized: "Low battery") }
+        return device.connection == .internalBattery ? String(localized: "On battery") : device.connection?.label ?? String(localized: "Connected")
     }
     var accessibilityStatus: String {
-        (level.map { "Yüzde \($0)" } ?? "Pil bilinmiyor") + ", " + subtitle
-        + (live ? ", bağlı" : store.deviceBatteries.isPaused ? ", duraklatıldı" : ", çevrimdışı")
-        + (power.map { ", " + $0.powerText } ?? "")
+        let state = live ? String(localized: "connected") : store.deviceBatteries.isPaused ? String(localized: "paused") : String(localized: "offline")
+        return ([level.map { LocalizedFormat.percent($0) } ?? String(localized: "Battery unknown"), subtitle, state] + (power.map { [$0.powerText] } ?? []))
+            .joined(separator: ", ")
     }
     var tooltip: String {
-        store.deviceBatteries.name(device) + "\n" + accessibilityStatus + "\n"
-        + (device.connection?.label ?? "Bağlantı henüz doğrulanmadı") + (device.telemetry.map { " · " + $0.label } ?? "")
-        + "\nSon ölçüm: " + (device.measuredAt?.formatted(date: .abbreviated, time: .shortened) ?? "Bilinmiyor")
-        + (device.approximate == true ? "\nYaklaşık pil seviyesi" : "")
-        + (power.map { "\n" + $0.powerHelp } ?? "") + "\nPil geçmişi için tıkla"
+        let measured = device.measuredAt?.formatted(date: .abbreviated, time: .shortened) ?? String(localized: "Unknown")
+        var lines = [store.deviceBatteries.name(device), accessibilityStatus,
+                     (device.connection?.label ?? String(localized: "Connection not verified yet")) + (device.telemetry.map { " · " + $0.label } ?? ""),
+                     String(localized: "Last measured: \(measured)")]
+        if device.approximate == true { lines.append(String(localized: "Approximate battery level")) }
+        if let power { lines.append(power.powerHelp) }
+        lines.append(String(localized: "Click for battery history"))
+        return lines.joined(separator: "\n")
     }
 }
 
@@ -384,7 +387,7 @@ private struct BatteryDeviceMenu: View {
     var body: some View {
         Menu { batteryContextMenu(device, store: store) } label: { Image(systemName: "ellipsis").frame(width: 20, height: 24).contentShape(Rectangle()) }
             .menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize().foregroundStyle(Palette.secondary)
-            .accessibilityLabel(store.deviceBatteries.name(device) + ", cihaz işlemleri")
+            .accessibilityLabel(String(localized: "\(store.deviceBatteries.name(device)), device actions"))
     }
 }
 
@@ -393,7 +396,7 @@ private struct BatteryRefreshButton: View {
     var body: some View {
         Button { store.refreshBatteryDevices() } label: { Image(systemName: "arrow.clockwise").frame(width: 28, height: 28).contentShape(Rectangle()) }
             .buttonStyle(.plain).disabled(store.deviceBatteries.isRefreshing || store.deviceBatteries.isolated || store.paused)
-            .help("Pilleri şimdi yenile").accessibilityLabel(store.deviceBatteries.isRefreshing ? "Piller yenileniyor" : "Pilleri yenile").accessibilityIdentifier("panel-refresh")
+            .help("Refresh batteries now").accessibilityLabel(store.deviceBatteries.isRefreshing ? "Refreshing batteries" : "Refresh batteries").accessibilityIdentifier("panel-refresh")
     }
 }
 
@@ -403,12 +406,12 @@ private struct BatteryRefreshStatus: View {
     var body: some View {
         HStack(spacing: 6) {
             if !batteries.issues.isEmpty {
-                Button { store.showBatterySettings() } label: { Label("Bağlantıyı kontrol et", systemImage: "exclamationmark.triangle").foregroundStyle(Palette.disk) }
+                Button { store.showBatterySettings() } label: { Label("Check connection", systemImage: "exclamationmark.triangle").foregroundStyle(Palette.disk) }
                     .buttonStyle(.plain).help(batteries.issues.joined(separator: "\n"))
             } else {
-                Text(batteries.isPaused ? "İzleme duraklatıldı" : batteries.isRefreshing ? "Piller yenileniyor…" : batteries.lastRefresh.map { "Son kontrol " + $0.formatted(date: .omitted, time: .shortened) } ?? "İlk ölçüm bekleniyor")
+                Text(batteries.isPaused ? String(localized: "Monitoring paused") : batteries.isRefreshing ? String(localized: "Refreshing batteries…") : batteries.lastRefresh.map { String(localized: "Last checked \($0.formatted(date: .omitted, time: .shortened))") } ?? String(localized: "Waiting for first reading"))
             }
-        }.help("Panel açıkken 15, arka planda 60 saniyede bir sorgulanır. Cihazın yanıt süresi eklenebilir.")
+        }.help("Queried every 15 seconds while the panel is open, every 60 seconds in the background. The device's response time may add to this.")
     }
 }
 
@@ -435,7 +438,7 @@ private struct BatteryDisclosure: View {
                 Spacer()
                 Image(systemName: expanded ? "chevron.up" : "chevron.down").font(.system(size: 10, weight: .semibold)).foregroundStyle(Palette.secondary)
             }.frame(minHeight: 28).contentShape(Rectangle())
-        }.buttonStyle(.plain).accessibilityValue(expanded ? "Açık" : "Kapalı")
+        }.buttonStyle(.plain).accessibilityValue(expanded ? "Expanded" : "Collapsed")
     }
 }
 
@@ -445,8 +448,8 @@ private struct BatteryEmptyState: View {
         HStack(spacing: 12) {
             Image(systemName: "laptopcomputer.and.iphone").font(.system(size: 23)).foregroundStyle(Palette.secondary)
             VStack(alignment: .leading, spacing: 4) {
-                Text(store.deviceBatteries.isPaused ? "İzleme duraklatıldı" : store.deviceBatteries.isRefreshing ? "Cihazlar kontrol ediliyor…" : "Bağlı cihaz pili görünmüyor").font(.callout.weight(.medium))
-                Text("Cihazları ve bağlantıları ayarlardan kontrol edebilirsin.").font(.caption).foregroundStyle(Palette.secondary)
+                Text(store.deviceBatteries.isPaused ? "Monitoring paused" : store.deviceBatteries.isRefreshing ? "Checking devices…" : "No connected device batteries").font(.callout.weight(.medium))
+                Text("You can check devices and connections in settings.").font(.caption).foregroundStyle(Palette.secondary)
             }
             Spacer(minLength: 0)
         }.padding(16).frame(maxWidth: .infinity, alignment: .leading)
@@ -473,10 +476,10 @@ func batteryGlyph(_ device: BatteryDevice) -> String {
     store.preferences.setWidgets(store.preferences.manualWidgets(for: store.usage) + [widget])
 }
 @MainActor @ViewBuilder private func batteryContextMenu(_ device: BatteryDevice, store: MonitorStore) -> some View {
-    Button("Pil geçmişi") { store.showBatteryHistory(device.id) }
-    Button("Menü çubuğunda göster") { addBatteryWidget(device, store: store) }
-    Button(store.deviceBatteries.preferences.options(for: device.id).favorite ? "Favorilerden çıkar" : "Favorilere ekle") { store.deviceBatteries.setOptions(device.id) { $0.favorite.toggle() } }
-    Button("Cihazı düzenle") { store.deviceBatteries.selectedSettingsDevice = device.id; store.deviceBatteries.settingsTab = "devices"; store.showBatterySettings() }
-    if device.source != .mac { Button("Bağlantı ayarları") { ConnectionSettings.open(device) } }
-    Button("Panelde gizle") { store.deviceBatteries.setOptions(device.id) { $0.hidden = true } }
+    Button("Battery history") { store.showBatteryHistory(device.id) }
+    Button("Show in menu bar") { addBatteryWidget(device, store: store) }
+    Button(store.deviceBatteries.preferences.options(for: device.id).favorite ? "Remove from favorites" : "Add to favorites") { store.deviceBatteries.setOptions(device.id) { $0.favorite.toggle() } }
+    Button("Edit device") { store.deviceBatteries.selectedSettingsDevice = device.id; store.deviceBatteries.settingsTab = "devices"; store.showBatterySettings() }
+    if device.source != .mac { Button("Connection settings") { ConnectionSettings.open(device) } }
+    Button("Hide in panel") { store.deviceBatteries.setOptions(device.id) { $0.hidden = true } }
 }

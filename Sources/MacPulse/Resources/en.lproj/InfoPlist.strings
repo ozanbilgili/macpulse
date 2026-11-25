@@ -1,0 +1,5 @@
+/* Bluetooth permission prompt */
+"NSBluetoothAlwaysUsageDescription" = "Battery levels of connected accessories are shown locally.";
+
+/* Local network permission prompt */
+"NSLocalNetworkUsageDescription" = "Batteries of iPhones and iPads already paired with this Mac are read over the local network.";

@@ -30,7 +30,7 @@ struct DashboardView: View {
                 HStack(spacing: 12) {
                 ForEach([MonitorTab.usage, .history, .alerts, .projects, .containers, .hardware, .bluetooth, .audio]) { tab in
                     Button { selected = tab } label: {
-                        Label(tab.rawValue + (tab == .alerts ? " · \(store.alerts.filter(\.active).count)" : ""), systemImage: tab.icon)
+                        Label(tab.label + (tab == .alerts ? " · \(store.alerts.filter(\.active).count)" : ""), systemImage: tab.icon)
                             .font(.system(size: 12, weight: .medium)).foregroundStyle(selected == tab ? tab.color : Palette.secondary)
                             .padding(.horizontal, 12).padding(.vertical, 8)
                             .background(selected == tab ? Palette.elevated : .clear, in: RoundedRectangle(cornerRadius: 8))
@@ -40,7 +40,7 @@ struct DashboardView: View {
                 }
                 }
                 }
-                Text(selected == .usage ? "Hesap limitleri ve kredi" : selected == .hardware ? "Bu oturum · son 90 örnek" : selected == .bluetooth || selected == .audio ? "Cihazlar · salt okunur" : store.historyError == nil ? "Geçmiş bu Mac'te · 30 gün" : "Geçmiş kaydı alınamıyor")
+                Text(selected == .usage ? "Account limits and credit" : selected == .hardware ? "This session · last 90 samples" : selected == .bluetooth || selected == .audio ? "Devices · read-only" : store.historyError == nil ? "History on this Mac · 30 days" : "History unavailable")
                     .font(.system(size: 10)).foregroundStyle(store.historyError == nil ? Palette.secondary : Palette.disk)
             }.padding(.horizontal, 24).padding(.bottom, 10)
             Rectangle().fill(Color.primary.opacity(0.06)).frame(height: 1)
@@ -73,7 +73,7 @@ struct DashboardView: View {
                             DetailView(tab: selected, snapshot: snapshot, history: store.history)
                             if selected == .cpu || selected == .memory {
                                 ApplicationListView(snapshot: snapshot.processes, initialSort: selected == .cpu ? .cpu : .memory,
-                                    limit: 10, title: selected == .cpu ? "CPU kullanan uygulamalar" : "Bellek kullanan uygulamalar", select: selectGroup)
+                                    limit: 10, title: selected == .cpu ? String(localized: "Apps using CPU") : String(localized: "Apps using memory"), select: selectGroup)
                             }
                         }
                         if let error = store.historyError {
@@ -91,7 +91,7 @@ struct DashboardView: View {
                 }
                 footer(snapshot)
             } else {
-                VStack(spacing: 14) { ProgressView(); Text("Mac'in ölçümleri alınıyor").foregroundStyle(Palette.secondary) }
+                VStack(spacing: 14) { ProgressView(); Text("Getting your Mac's measurements").foregroundStyle(Palette.secondary) }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
@@ -112,7 +112,7 @@ struct DashboardView: View {
                     .frame(width: 43, height: 43).background(Palette.accent.opacity(0.09), in: RoundedRectangle(cornerRadius: 12))
                 VStack(alignment: .leading, spacing: 4) {
                     Text("MacPulse").font(.system(size: 17, weight: .semibold))
-                    Text(store.snapshot.map { "\($0.system.chip) · \($0.system.cores) çekirdek" } ?? "Sistem izleme")
+                    Text(store.snapshot.map { "\($0.system.chip) · \($0.system.cores) cores" } ?? "System monitoring")
                         .font(.system(size: 11)).foregroundStyle(Palette.secondary)
                 }
             }
@@ -120,7 +120,7 @@ struct DashboardView: View {
             HStack(spacing: 3) {
                 ForEach(Array(MonitorTab.allCases.prefix(7).enumerated()), id: \.element.id) { index, tab in
                     Button { selected = tab } label: {
-                        Label(tab.rawValue, systemImage: tab.icon)
+                        Label(tab.label, systemImage: tab.icon)
                             .font(.system(size: 12, weight: .medium)).padding(.horizontal, 11).padding(.vertical, 9)
                             .foregroundStyle(selected == tab ? tab.color : Palette.secondary)
                             .background(selected == tab ? Palette.elevated : .clear, in: RoundedRectangle(cornerRadius: 9))
@@ -133,23 +133,23 @@ struct DashboardView: View {
                 Image(systemName: store.paused ? "play.fill" : "pause.fill")
                     .font(.system(size: 12)).foregroundStyle(Palette.secondary)
                     .frame(width: 34, height: 34).background(Color.primary.opacity(0.04), in: Circle())
-            }.buttonStyle(.plain).help(store.paused ? "İzlemeyi sürdür" : "İzlemeyi duraklat")
-                .accessibilityLabel(store.paused ? "İzlemeyi sürdür" : "İzlemeyi duraklat")
+            }.buttonStyle(.plain).help(store.paused ? "Resume monitoring" : "Pause monitoring")
+                .accessibilityLabel(store.paused ? "Resume monitoring" : "Pause monitoring")
             Button { openSettings() } label: {
                 Image(systemName: "gearshape").foregroundStyle(Palette.secondary)
                     .frame(width: 30, height: 34)
-            }.buttonStyle(.plain).help("Tercihler · Cmd+,").accessibilityLabel("Tercihleri aç")
+            }.buttonStyle(.plain).help("Settings · Cmd+,").accessibilityLabel("Open Settings")
         }.padding(.horizontal, 24).padding(.top, 14).padding(.bottom, 14)
     }
 
     private func overview(_ snapshot: MetricSnapshot) -> some View {
         VStack(alignment: .leading, spacing: 18) {
             HStack(alignment: .firstTextBaseline) {
-                Text("Mac'in şu anki durumu").font(.system(size: 24, weight: .semibold, design: .rounded))
+                Text("Your Mac right now").font(.system(size: 24, weight: .semibold, design: .rounded))
                 Spacer()
                 HStack(spacing: 6) {
                     Circle().fill(store.paused ? Palette.disk : Palette.accent).frame(width: 6, height: 6)
-                    Text(store.paused ? "Duraklatıldı" : "Canlı izleme").font(.system(size: 11, weight: .medium)).foregroundStyle(Palette.secondary)
+                    Text(store.paused ? "Paused" : "Live monitoring").font(.system(size: 11, weight: .medium)).foregroundStyle(Palette.secondary)
                 }
             }
             LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 14), count: 3), spacing: 14) {
@@ -162,7 +162,7 @@ struct DashboardView: View {
             }
             Button { selected = .usage } label: {
                 HStack(spacing: 12) {
-                    Label("AI Kullanımı", systemImage: "chart.bar.xaxis").foregroundStyle(Palette.memory)
+                    Label("AI Usage", systemImage: "chart.bar.xaxis").foregroundStyle(Palette.memory)
                     Text(store.usage.summary).foregroundStyle(Palette.secondary)
                     Spacer()
                     if let c = store.usage.credit?.credit { Text("OpenRouter \(AIUsage.formatUSD(c.remaining))").monospacedDigit() }
@@ -170,28 +170,28 @@ struct DashboardView: View {
                 }.font(.callout).padding(16).background(Palette.card, in: RoundedRectangle(cornerRadius: 14)).contentShape(Rectangle())
             }.buttonStyle(.plain)
             HStack {
-                Text("Dikkat gerektiren durumlar").font(.system(size: 17, weight: .semibold))
+                Text("Needs attention").font(.system(size: 17, weight: .semibold))
                 Spacer()
-                Button("Uyarıları gör") { selected = .alerts }.buttonStyle(.plain).font(.system(size: 12)).foregroundStyle(Palette.accent)
+                Button("See alerts") { selected = .alerts }.buttonStyle(.plain).font(.system(size: 12)).foregroundStyle(Palette.accent)
             }.padding(.top, 4)
             AlertListView(alerts: store.alerts, limit: 3)
-            Text("Şu anda").font(.system(size: 17, weight: .semibold)).padding(.top, 2)
+            Text("Right now").font(.system(size: 17, weight: .semibold)).padding(.top, 2)
             HStack(alignment: .top, spacing: 14) {
                 if let memory = snapshot.memory {
-                    BreakdownCard(title: "Bellek dağılımı", icon: "memorychip", center: MetricFormat.percent(memory.usedPercent), subtitle: "kullanılıyor", color: Palette.memory,
+                    BreakdownCard(title: String(localized: "Memory breakdown"), icon: "memorychip", center: MetricFormat.percent(memory.usedPercent), subtitle: String(localized: "in use"), color: Palette.memory,
                         slices: [
-                            RingSlice(title: "Uygulamalar", value: Double(memory.app), color: Palette.memory),
-                            RingSlice(title: "Sabit", value: Double(memory.wired), color: Palette.disk),
-                            RingSlice(title: "Sıkıştırılmış", value: Double(memory.compressed), color: Palette.network),
-                            RingSlice(title: "Kullanılabilir", value: Double(memory.total - memory.used), color: Palette.elevated)
+                            RingSlice(title: String(localized: "Apps"), value: Double(memory.app), color: Palette.memory),
+                            RingSlice(title: String(localized: "Wired"), value: Double(memory.wired), color: Palette.disk),
+                            RingSlice(title: String(localized: "Compressed"), value: Double(memory.compressed), color: Palette.network),
+                            RingSlice(title: String(localized: "Available"), value: Double(memory.total - memory.used), color: Palette.elevated)
                         ], binary: true)
                 }
                 if let cpu = snapshot.cpu {
-                    BreakdownCard(title: "CPU dağılımı", icon: "cpu", center: MetricFormat.percent(cpu.used), subtitle: "kullanılıyor", color: Palette.cpu,
+                    BreakdownCard(title: String(localized: "CPU breakdown"), icon: "cpu", center: MetricFormat.percent(cpu.used), subtitle: String(localized: "in use"), color: Palette.cpu,
                         slices: [
-                            RingSlice(title: "Kullanıcı", value: cpu.user, color: Palette.cpu),
-                            RingSlice(title: "Sistem", value: cpu.system, color: Palette.memory),
-                            RingSlice(title: "Boşta", value: cpu.idle, color: Palette.elevated)
+                            RingSlice(title: String(localized: "User"), value: cpu.user, color: Palette.cpu),
+                            RingSlice(title: String(localized: "System"), value: cpu.system, color: Palette.memory),
+                            RingSlice(title: String(localized: "Idle"), value: cpu.idle, color: Palette.elevated)
                         ], percentages: true)
                 }
                 NetworkSummary(network: snapshot.network, limit: 2)
@@ -204,69 +204,69 @@ struct DashboardView: View {
             }
             HStack(spacing: 14) {
                 Button { selected = .projects } label: {
-                    DeveloperSummary(title: "Geliştirme projeleri", icon: "hammer", color: Palette.disk,
-                        value: snapshot.developer.map { "\($0.projects.count) proje · \($0.listenerProcessCount) TCP dinleyicisi" } ?? "Ölçüm alınamıyor",
-                        detail: snapshot.developer.map { "\($0.projects.filter { $0.activity == .idleCandidate }.count) boşta adayı · salt okunur" } ?? "")
+                    DeveloperSummary(title: String(localized: "Development projects"), icon: "hammer", color: Palette.disk,
+                        value: snapshot.developer.map { String(localized: "\($0.projects.count) projects · \($0.listenerProcessCount) TCP listeners") } ?? String(localized: "Measurement unavailable"),
+                        detail: snapshot.developer.map { String(localized: "\($0.projects.filter { $0.activity == .idleCandidate }.count) idle candidates · read-only") } ?? "")
                 }.buttonStyle(.plain)
                 Button { selected = .containers } label: {
-                    DeveloperSummary(title: "Containerlar", icon: "shippingbox", color: Palette.accent,
-                        value: snapshot.containers.map { "\($0.runningCount) çalışıyor · \($0.containerCount) container" } ?? "Ölçüm alınamıyor",
-                        detail: "Yalnız çalışan yerel runtime'lar")
+                    DeveloperSummary(title: String(localized: "Containers"), icon: "shippingbox", color: Palette.accent,
+                        value: snapshot.containers.map { String(localized: "\($0.runningCount) running · \($0.containerCount) containers") } ?? String(localized: "Measurement unavailable"),
+                        detail: String(localized: "Local running runtimes only"))
                 }.buttonStyle(.plain)
             }
         }
     }
 
     private func cpuCard(_ s: MetricSnapshot) -> some View {
-        MetricCard(title: "CPU", icon: "cpu", eyebrow: "Tüm çekirdeklerde kullanım", value: MetricFormat.percent(s.cpu?.used), color: Palette.cpu,
-            facts: [StatFact(title: "Kullanıcı", value: MetricFormat.percent(s.cpu?.user)), StatFact(title: "Sistem", value: MetricFormat.percent(s.cpu?.system)), StatFact(title: "Boşta", value: MetricFormat.percent(s.cpu?.idle))],
+        MetricCard(title: "CPU", icon: "cpu", eyebrow: String(localized: "Usage across all cores"), value: MetricFormat.percent(s.cpu?.used), color: Palette.cpu,
+            facts: [StatFact(title: String(localized: "User"), value: MetricFormat.percent(s.cpu?.user)), StatFact(title: String(localized: "System"), value: MetricFormat.percent(s.cpu?.system)), StatFact(title: String(localized: "Idle"), value: MetricFormat.percent(s.cpu?.idle))],
             points: plotPoints(store.history) { $0.cpu?.used }, ceiling: 100) { selected = .cpu }
     }
 
     private func memoryCard(_ s: MetricSnapshot) -> some View {
-        MetricCard(title: "Bellek", icon: "memorychip", eyebrow: "\(MetricFormat.bytes(s.memory?.total, binary: true)) içinde kullanılan", value: MetricFormat.bytes(s.memory?.used, binary: true), color: Palette.memory,
-            facts: [StatFact(title: "Uygulamalar", value: MetricFormat.bytes(s.memory?.app, binary: true)), StatFact(title: "Sabit", value: MetricFormat.bytes(s.memory?.wired, binary: true)), StatFact(title: "Sıkıştırılmış", value: MetricFormat.bytes(s.memory?.compressed, binary: true))],
+        MetricCard(title: String(localized: "Memory"), icon: "memorychip", eyebrow: String(localized: "used of \(MetricFormat.bytes(s.memory?.total, binary: true))"), value: MetricFormat.bytes(s.memory?.used, binary: true), color: Palette.memory,
+            facts: [StatFact(title: String(localized: "Apps"), value: MetricFormat.bytes(s.memory?.app, binary: true)), StatFact(title: String(localized: "Wired"), value: MetricFormat.bytes(s.memory?.wired, binary: true)), StatFact(title: String(localized: "Compressed"), value: MetricFormat.bytes(s.memory?.compressed, binary: true))],
             points: plotPoints(store.history) { $0.memory?.usedPercent }, ceiling: 100, badge: s.memory?.pressure.label) { selected = .memory }
     }
 
     private func diskCard(_ s: MetricSnapshot) -> some View {
-        MetricCard(title: "Disk", icon: "internaldrive", eyebrow: "Başlangıç diskinde boş alan", value: MetricFormat.bytes(s.disk?.available), color: Palette.disk,
-            facts: [StatFact(title: "Okuma", value: MetricFormat.rate(s.disk?.io?.incomingRate)), StatFact(title: "Yazma", value: MetricFormat.rate(s.disk?.io?.outgoingRate)), StatFact(title: "Kullanılan", value: MetricFormat.percent(s.disk?.usedPercent))],
+        MetricCard(title: "Disk", icon: "internaldrive", eyebrow: String(localized: "Free space on startup disk"), value: MetricFormat.bytes(s.disk?.available), color: Palette.disk,
+            facts: [StatFact(title: String(localized: "Read"), value: MetricFormat.rate(s.disk?.io?.incomingRate)), StatFact(title: String(localized: "Write"), value: MetricFormat.rate(s.disk?.io?.outgoingRate)), StatFact(title: String(localized: "Used"), value: MetricFormat.percent(s.disk?.usedPercent))],
             points: plotPoints(store.history) { $0.disk?.io.map { $0.incomingRate + $0.outgoingRate } },
-            emptyLabel: s.issues.contains { $0.id == "diskIO" } ? "Okuma/yazma ölçümü alınamıyor" : "Grafik için ölçümler birikiyor") { selected = .disk }
+            emptyLabel: s.issues.contains { $0.id == "diskIO" } ? String(localized: "Read/write measurement unavailable") : String(localized: "Collecting samples for the chart")) { selected = .disk }
     }
 
     private func networkCard(_ s: MetricSnapshot) -> some View {
-        MetricCard(title: "Ağ", icon: "network", eyebrow: "İndirme hızı · fiziksel arayüzler", value: MetricFormat.rate(s.network?.incomingRate), color: Palette.network,
-            facts: [StatFact(title: "Yükleme", value: MetricFormat.rate(s.network?.outgoingRate)), StatFact(title: "Oturumda alınan", value: MetricFormat.bytes(s.network?.sessionReceived)), StatFact(title: "Oturumda gönderilen", value: MetricFormat.bytes(s.network?.sessionSent))],
+        MetricCard(title: String(localized: "Network"), icon: "network", eyebrow: String(localized: "Download speed · physical interfaces"), value: MetricFormat.rate(s.network?.incomingRate), color: Palette.network,
+            facts: [StatFact(title: String(localized: "Upload"), value: MetricFormat.rate(s.network?.outgoingRate)), StatFact(title: String(localized: "Received this session"), value: MetricFormat.bytes(s.network?.sessionReceived)), StatFact(title: String(localized: "Sent this session"), value: MetricFormat.bytes(s.network?.sessionSent))],
             points: plotPoints(store.history) { $0.network?.incomingRate }) { selected = .network }
     }
 
     private func batteryCard(_ s: MetricSnapshot) -> some View {
-        MetricCard(title: "Pil", icon: "battery.100percent", eyebrow: s.battery?.stateLabel ?? "Güç kaynağı", value: s.battery?.present == false ? "Pil yok" : s.battery?.percent.map { "\($0)%" } ?? "—", color: Palette.battery,
-            facts: [StatFact(title: "Kalan süre", value: s.battery?.minutesRemaining.map { MetricFormat.duration(Double($0 * 60)) } ?? "—"), StatFact(title: "Kaynak", value: s.battery.map { $0.onAC ? "Adaptör" : ($0.present ? "Pil" : "Şebeke") } ?? "—"), StatFact(title: "Düşük güç", value: s.battery.map { $0.lowPowerMode ? "Açık" : "Kapalı" } ?? "—")],
+        MetricCard(title: String(localized: "Battery"), icon: "battery.100percent", eyebrow: s.battery?.stateLabel ?? String(localized: "Power source"), value: s.battery?.present == false ? String(localized: "No battery") : MetricFormat.percent(s.battery?.percent), color: Palette.battery,
+            facts: [StatFact(title: String(localized: "Time remaining"), value: s.battery?.minutesRemaining.map { MetricFormat.duration(Double($0 * 60)) } ?? "—"), StatFact(title: String(localized: "Source"), value: s.battery.map { $0.onAC ? String(localized: "Adapter") : ($0.present ? String(localized: "Battery") : String(localized: "AC power")) } ?? "—"), StatFact(title: String(localized: "Low Power"), value: s.battery.map { $0.lowPowerMode ? String(localized: "On") : String(localized: "Off") } ?? "—")],
             points: plotPoints(store.history) { $0.battery?.percent.map(Double.init) }, ceiling: 100,
-            emptyLabel: s.battery?.present == false ? "Bu Mac'te dahili pil bulunmuyor" : "Grafik için ölçümler birikiyor") { selected = .battery }
+            emptyLabel: s.battery?.present == false ? String(localized: "This Mac has no internal battery") : String(localized: "Collecting samples for the chart")) { selected = .battery }
     }
 
     private func gpuCard(_ s: MetricSnapshot) -> some View {
         let gpu = s.hardware?.gpus.count == 1 ? s.hardware?.gpus.first : nil
-        return MetricCard(title: "GPU", icon: "square.3.layers.3d", eyebrow: "Sürücü kullanım sayacı", value: MetricFormat.percent(gpu?.devicePercent), color: Palette.gpu,
-            facts: [StatFact(title: "Renderer", value: MetricFormat.percent(gpu?.rendererPercent)), StatFact(title: "Tiler", value: MetricFormat.percent(gpu?.tilerPercent)), StatFact(title: "Sürücü belleği", value: MetricFormat.bytes(gpu?.memoryInUse, binary: true))],
+        return MetricCard(title: "GPU", icon: "square.3.layers.3d", eyebrow: String(localized: "Driver utilization counter"), value: MetricFormat.percent(gpu?.devicePercent), color: Palette.gpu,
+            facts: [StatFact(title: "Renderer", value: MetricFormat.percent(gpu?.rendererPercent)), StatFact(title: "Tiler", value: MetricFormat.percent(gpu?.tilerPercent)), StatFact(title: String(localized: "Driver memory"), value: MetricFormat.bytes(gpu?.memoryInUse, binary: true))],
             points: plotPoints(store.history) { $0.hardware?.singleGPUPercent }, ceiling: 100) { selected = .hardware }
     }
 
     private func systemCard(_ s: MetricSnapshot) -> some View {
         VStack(alignment: .leading, spacing: 10) {
-            Label("Sistem", systemImage: "desktopcomputer").font(.system(size: 12, weight: .semibold)).foregroundStyle(Palette.secondary)
+            Label("System", systemImage: "desktopcomputer").font(.system(size: 12, weight: .semibold)).foregroundStyle(Palette.secondary)
             VStack(alignment: .leading, spacing: 3) {
-                Text("Kesintisiz çalışma").font(.system(size: 11)).foregroundStyle(Palette.secondary)
+                Text("Uptime").font(.system(size: 11)).foregroundStyle(Palette.secondary)
                 Text(MetricFormat.duration(s.system.uptime)).font(.system(size: 34, weight: .semibold, design: .rounded)).monospacedDigit().lineLimit(1).minimumScaleFactor(0.65)
             }
-            FactRow(facts: [StatFact(title: "İşlemci", value: s.system.chip), StatFact(title: "Çekirdek", value: "\(s.system.cores)"), StatFact(title: "RAM", value: MetricFormat.bytes(s.system.physicalMemory, binary: true))])
+            FactRow(facts: [StatFact(title: String(localized: "Processor"), value: s.system.chip), StatFact(title: String(localized: "Cores"), value: "\(s.system.cores)"), StatFact(title: "RAM", value: MetricFormat.bytes(s.system.physicalMemory, binary: true))])
             HStack(spacing: 7) {
                 Image(systemName: "thermometer.medium").foregroundStyle(Palette.accent)
-                Text("Termal durum: \(s.system.thermalState)")
+                Text("Thermal state: \(s.system.thermalState)")
                 Spacer()
                 Text(s.system.operatingSystem)
             }.font(.system(size: 11)).foregroundStyle(Palette.secondary).frame(height: 38, alignment: .bottom)
@@ -277,9 +277,9 @@ struct DashboardView: View {
 
     private func footer(_ s: MetricSnapshot) -> some View {
         HStack {
-            Text("Ölçümler bu Mac'te · \(store.history.count) örnek · \(s.processes?.applicationCount ?? 0) uygulama · \(s.processes?.processCount ?? 0) süreç")
+            Text("Measured on this Mac · \(store.history.count) samples · \(s.processes?.applicationCount ?? 0) apps · \(s.processes?.processCount ?? 0) processes")
             Spacer()
-            Text(store.paused ? "Duraklatıldı" : "Son ölçüm \(s.date.formatted(date: .omitted, time: .standard))")
+            Text(store.paused ? "Paused" : "Last measured \(s.date.formatted(date: .omitted, time: .standard))")
         }.font(.system(size: 10)).foregroundStyle(Palette.secondary)
             .padding(.horizontal, 24).padding(.vertical, 10).background(Color.primary.opacity(0.015))
     }
@@ -298,11 +298,11 @@ struct NetworkSummary: View {
     }
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Label("Ağ arayüzleri", systemImage: "network").font(.system(size: 12, weight: .semibold)).foregroundStyle(Palette.network)
+            Label("Network interfaces", systemImage: "network").font(.system(size: 12, weight: .semibold)).foregroundStyle(Palette.network)
             VStack(alignment: .leading, spacing: 10) {
                 if let network {
                     if network.interfaces.isEmpty {
-                        Text("Bağlı fiziksel arayüz yok").font(.system(size: 12)).foregroundStyle(Palette.secondary)
+                        Text("No connected physical interfaces").font(.system(size: 12)).foregroundStyle(Palette.secondary)
                     }
                     ForEach(displayed) { interface in
                         HStack {
@@ -315,11 +315,11 @@ struct NetworkSummary: View {
                         }
                     }
                     if let limit, network.interfaces.count > limit {
-                        Text("\(network.interfaces.count) arayüz · tümü Ağ sekmesinde").font(.system(size: 10)).foregroundStyle(Palette.secondary)
+                        Text("\(network.interfaces.count) interfaces · all in the Network tab").font(.system(size: 10)).foregroundStyle(Palette.secondary)
                     }
-                } else { Text("Ağ ölçümü alınamıyor").font(.system(size: 12)).foregroundStyle(Palette.secondary) }
+                } else { Text("Network measurement unavailable").font(.system(size: 12)).foregroundStyle(Palette.secondary) }
                 Spacer(minLength: 0)
-                Text("Fiziksel bağlantılar ölçülür. VPN ve yerel trafik ayrıca toplanmaz.")
+                Text("Physical connections are measured. VPN and local traffic aren't counted separately.")
                     .font(.system(size: 10)).foregroundStyle(Palette.secondary).fixedSize(horizontal: false, vertical: true)
             }.frame(minHeight: 112, alignment: .top)
         }.padding(16).frame(maxWidth: .infinity, alignment: .leading)

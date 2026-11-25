@@ -46,13 +46,9 @@ enum MetricFormat {
         guard let value else { return "—" }
         return byteAmount(value) + "/s"
     }
-    static func percent(_ value: Double?) -> String { value.map { number($0, digits: 0) + "%" } ?? "—" }
-    static func duration(_ seconds: Double) -> String {
-        let minutes = max(0, Int(seconds / 60))
-        if minutes >= 1440 { return "\(minutes / 1440) gün \((minutes % 1440) / 60) sa" }
-        if minutes >= 60 { return "\(minutes / 60) sa \(minutes % 60) dk" }
-        return "\(minutes) dk"
-    }
+    static func percent(_ value: Double?) -> String { value.map { LocalizedFormat.percent($0) } ?? "—" }
+    static func percent(_ value: Int?) -> String { value.map { LocalizedFormat.percent($0) } ?? "—" }
+    static func duration(_ seconds: Double) -> String { AIUsage.formatDuration(seconds) }
 }
 
 struct StatFact: Identifiable {
@@ -100,7 +96,7 @@ struct MetricChart: View {
     let color: Color
     var ceiling: Double? = nil
     var detailed = false
-    var emptyLabel = "Grafik için ölçümler birikiyor"
+    var emptyLabel = String(localized: "Collecting samples for the chart")
     private var upper: Double { ceiling ?? max(1, (points.map(\.value).max() ?? 0) * 1.2) }
     var body: some View {
         Group {
@@ -111,16 +107,16 @@ struct MetricChart: View {
                 }.font(.system(size: 11)).foregroundStyle(Palette.secondary).frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
             } else {
                 Chart(points) { point in
-                    AreaMark(x: .value("Zaman", point.date), y: .value("Değer", point.value), series: .value("Aralık", point.segment))
+                    AreaMark(x: .value("Time", point.date), y: .value("Value", point.value), series: .value("Range", point.segment))
                         .foregroundStyle(LinearGradient(colors: [color.opacity(0.22), color.opacity(0.015)], startPoint: .top, endPoint: .bottom))
-                    LineMark(x: .value("Zaman", point.date), y: .value("Değer", point.value), series: .value("Aralık", point.segment))
+                    LineMark(x: .value("Time", point.date), y: .value("Value", point.value), series: .value("Range", point.segment))
                         .foregroundStyle(color).lineStyle(StrokeStyle(lineWidth: detailed ? 2.5 : 1.7))
                 }
                 .chartYScale(domain: 0...upper)
                 .chartXAxis(detailed ? .automatic : .hidden)
                 .chartYAxis(detailed ? .automatic : .hidden)
                 .chartLegend(.hidden)
-                .accessibilityLabel("Canlı ölçüm geçmişi")
+                .accessibilityLabel("Live measurement history")
             }
         }
     }
@@ -133,7 +129,7 @@ struct MetricCard: View {
     let points: [PlotPoint]
     var ceiling: Double? = nil
     var badge: String? = nil
-    var emptyLabel = "Grafik için ölçümler birikiyor"
+    var emptyLabel = String(localized: "Collecting samples for the chart")
     let action: () -> Void
     var body: some View {
         Button(action: action) {
@@ -163,7 +159,7 @@ struct MetricCard: View {
             .contentShape(RoundedRectangle(cornerRadius: 18))
         }.buttonStyle(.plain).accessibilityElement(children: .ignore)
             .accessibilityAddTraits(.isButton)
-            .accessibilityLabel(title).accessibilityValue(value).accessibilityHint("Ayrıntıları aç")
+            .accessibilityLabel(title).accessibilityValue(value).accessibilityHint("Open details")
     }
 }
 
@@ -186,7 +182,7 @@ struct BreakdownCard: View {
             HStack(spacing: 20) {
                 ZStack {
                     Chart(slices) { slice in
-                        SectorMark(angle: .value("Miktar", slice.value), innerRadius: .ratio(0.78), angularInset: 1.4)
+                        SectorMark(angle: .value("Amount", slice.value), innerRadius: .ratio(0.78), angularInset: 1.4)
                             .foregroundStyle(slice.color)
                     }.chartLegend(.hidden).frame(width: 112, height: 112)
                     VStack(spacing: 4) {

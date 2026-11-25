@@ -10,10 +10,10 @@ public enum BatteryConnection: String, Codable, Sendable {
         case .bluetooth: "Bluetooth"
         case .usb: "USB"
         case .wifi: "Wi‑Fi"
-        case .usbReceiver: "USB alıcısı"
-        case .appleLink: "Apple bağlantısı"
-        case .viaIPhone: "iPhone üzerinden"
-        case .viaIPad: "iPad üzerinden"
+        case .usbReceiver: String(localized: "USB receiver")
+        case .appleLink: String(localized: "Apple link")
+        case .viaIPhone: String(localized: "Via iPhone")
+        case .viaIPad: String(localized: "Via iPad")
         case .viaIPadUSB: "iPad · USB"
         case .viaIPadWiFi: "iPad · Wi‑Fi"
         }

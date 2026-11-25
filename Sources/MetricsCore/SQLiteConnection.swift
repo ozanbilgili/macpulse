@@ -16,13 +16,13 @@ final class SQLiteConnection: @unchecked Sendable {
         var db: OpaquePointer?
         guard sqlite3_open_v2(url.path, &db, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_FULLMUTEX, nil) == SQLITE_OK else {
             if let db { sqlite3_close(db) }
-            throw HistoryError(description: "Yerel geçmiş veritabanı açılamadı.")
+            throw HistoryError(description: String(localized: "The local history database couldn't be opened."))
         }
         handle = db
         do {
             sqlite3_busy_timeout(db, 2_000)
             let version = try scalar("PRAGMA user_version")
-            guard version <= 2 else { throw HistoryError(description: "Geçmiş veritabanı daha yeni bir uygulama sürümüne ait; mevcut kayıt korundu.") }
+            guard version <= 2 else { throw HistoryError(description: String(localized: "The history database belongs to a newer app version; existing records were kept.")) }
             try exec("PRAGMA journal_mode=WAL")
             try exec("PRAGMA synchronous=NORMAL")
             try exec("PRAGMA journal_size_limit=4194304")
@@ -130,6 +130,6 @@ final class SQLiteConnection: @unchecked Sendable {
         return statement
     }
     private func failure() -> HistoryError {
-        HistoryError(description: "Yerel geçmiş kaydı okunamadı/yazılamadı (SQLite \(sqlite3_errcode(handle))). Canlı ölçümler devam eder.")
+        HistoryError(description: String(localized: "Local history couldn't be read or written (SQLite \(String(sqlite3_errcode(handle)))). Live measurements continue."))
     }
 }

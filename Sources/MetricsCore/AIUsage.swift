@@ -203,7 +203,7 @@ public enum AIUsage {
     }
 
     /// Kullanıcı adı ya da "Hesap N"; e-postanın alan adı (şirket adı) asla gösterilmez.
-    public static func accountLabel(_ n: Int, names: [Int: String]) -> String { names[n] ?? "Hesap \(n)" }
+    public static func accountLabel(_ n: Int, names: [Int: String]) -> String { names[n] ?? String(localized: "Account \(String(n))") }
 
     // MARK: - Keychain (yalnızca security CLI, yalnızca okuma)
 
@@ -549,17 +549,15 @@ public enum AIUsage {
         return loadCreditState(hasKey: key != nil)
     }
 
-    private static let usdFormatter: NumberFormatter = {
+    /// `$9.47` / `$9,47`: dollar amount in the user's number format.
+    public static func formatUSD(_ v: Double, locale: Locale = .current) -> String {
         let f = NumberFormatter()
-        f.locale = Locale(identifier: "tr_TR")
+        f.locale = locale
         f.numberStyle = .currency
         f.currencyCode = "USD"
         f.currencySymbol = "$"
-        return f
-    }()
-
-    /// `$9,47` (Türkçe ondalık virgülü).
-    public static func formatUSD(_ v: Double) -> String { usdFormatter.string(from: NSNumber(value: v)) ?? String(format: "$%.2f", v) }
+        return f.string(from: NSNumber(value: v)) ?? String(format: "$%.2f", v)
+    }
 
 
     // MARK: - Biçimlendirme
@@ -568,35 +566,35 @@ public enum AIUsage {
         pct >= 90 ? .red : pct >= 70 ? .yellow : pct >= 50 ? .orange : .green
     }
 
-    private static let dayNames = ["Pzt", "Sal", "Çar", "Per", "Cum", "Cmt", "Paz"]
-
     /// En yakın dakikaya yuvarlar: API `18:59:59.57` verir, `21:59` değil `22:00` görünsün (OpenUsage ile aynı).
     public static func roundedToMinute(_ d: Date) -> Date {
         Date(timeIntervalSince1970: (d.timeIntervalSince1970 / 60).rounded() * 60)
     }
 
-    public static func formatReset(_ d: Date, now: Date = Date()) -> String {
+    /// Same day: clock time only (`14:00` / `2:00 PM`); otherwise the short weekday too.
+    public static func formatReset(_ d: Date, now: Date = Date(), locale: Locale = .current) -> String {
         let d = roundedToMinute(d)
-        let cal = Calendar.current
-        let hm = String(format: "%02d:%02d", cal.component(.hour, from: d), cal.component(.minute, from: d))
-        if cal.isDate(d, inSameDayAs: now) { return hm }
-        return "\(dayNames[(cal.component(.weekday, from: d) + 5) % 7]) \(hm)"
+        if Calendar.current.isDate(d, inSameDayAs: now) { return clock(d, locale: locale) }
+        return d.formatted(Date.FormatStyle(locale: locale).weekday(.abbreviated).hour().minute())
+    }
+
+    private static func clock(_ d: Date, locale: Locale) -> String {
+        d.formatted(Date.FormatStyle(locale: locale).hour().minute())
     }
 
     public static func formatDuration(_ seconds: TimeInterval) -> String {
         let s = max(0, Int(seconds))
         let days = s / 86400, hours = (s % 86400) / 3600, mins = (s % 3600) / 60
-        if days >= 1 { return "\(days) g \(hours) sa" }
-        if s >= 3600 { return "\(hours) sa \(mins) dk" }
-        return "\(mins) dk"
+        if days >= 1 { return String(localized: "\(days)d \(hours)h") }
+        if s >= 3600 { return String(localized: "\(hours)h \(mins)m") }
+        return String(localized: "\(mins)m")
     }
 
     public static func formatCountdown(_ d: Date, now: Date = Date()) -> String { formatDuration(d.timeIntervalSince(now)) }
 
-    public static func formatClock(_ d: Date, seconds: Bool = false) -> String {
-        let c = Calendar.current.dateComponents([.hour, .minute, .second], from: d)
-        return seconds ? String(format: "%02d:%02d:%02d", c.hour!, c.minute!, c.second!)
-                       : String(format: "%02d:%02d", c.hour!, c.minute!)
+    public static func formatClock(_ d: Date, seconds: Bool = false, locale: Locale = .current) -> String {
+        let style = Date.FormatStyle(locale: locale).hour().minute()
+        return d.formatted(seconds ? style.second() : style)
     }
 
 
@@ -643,18 +641,14 @@ public enum AIUsage {
     }
 
 
-    private static let monthNames = ["Oca", "Şub", "Mar", "Nis", "May", "Haz", "Tem", "Ağu", "Eyl", "Eki", "Kas", "Ara"]
+    /// Within the next 6 days `Fri 14:00`, otherwise `3 Oct 14:00` (locale order and clock).
+    public static func formatMoment(_ d: Date, now: Date = Date(), locale: Locale = .current) -> String {
+        if d.timeIntervalSince(now) < 6 * 86400 { return formatReset(d, now: now, locale: locale) }
+        return dayMonthTime(roundedToMinute(d), locale: locale)
+    }
 
-    /// 1…12 → `Oca`…`Ara`.
-    public static func shortMonth(_ m: Int) -> String { monthNames[max(1, min(12, m)) - 1] }
-
-    /// Önümüzdeki 6 gün içindeyse `Cum 14:00`, değilse `3 Eki 14:00`.
-    public static func formatMoment(_ d: Date, now: Date = Date()) -> String {
-        if d.timeIntervalSince(now) < 6 * 86400 { return formatReset(d, now: now) }
-        let d = roundedToMinute(d)
-        let cal = Calendar.current
-        return "\(cal.component(.day, from: d)) \(monthNames[cal.component(.month, from: d) - 1]) "
-            + String(format: "%02d:%02d", cal.component(.hour, from: d), cal.component(.minute, from: d))
+    private static func dayMonthTime(_ d: Date, locale: Locale) -> String {
+        d.formatted(Date.FormatStyle(locale: locale).day().month(.abbreviated)) + " " + clock(d, locale: locale)
     }
 
     // MARK: - OpenUsage tarzı gösterge (WidgetData.MeterState)
@@ -714,29 +708,29 @@ public enum AIUsage {
 
     /// OpenUsage `whenLabel`: mutlak `bugün 20:58` / `yarın 00:20` / `6 Eki 11:00`, göreli `1 sa 28 dk`
     /// (dakika yukarı yuvarlanır). Geçmişte ya da göreli ≤5 dk → nil ("yakında").
-    public static func formatWhen(_ d: Date, now: Date, relative: Bool) -> String? {
+    public static func formatWhen(_ d: Date, now: Date, relative: Bool, locale: Locale = .current) -> String? {
         let secs = d.timeIntervalSince(now)
         if relative { return secs <= 300 ? nil : formatDuration((secs / 60).rounded(.up) * 60) }
         guard secs > 0 else { return nil }
         let r = roundedToMinute(d)
         let cal = Calendar.current
         let days = cal.dateComponents([.day], from: cal.startOfDay(for: now), to: cal.startOfDay(for: r)).day ?? 0
-        let hm = String(format: "%02d:%02d", cal.component(.hour, from: r), cal.component(.minute, from: r))
-        if days <= 0 { return "bugün \(hm)" }
-        if days == 1 { return "yarın \(hm)" }
-        return "\(cal.component(.day, from: r)) \(monthNames[cal.component(.month, from: r) - 1]) \(hm)"
+        let hm = clock(r, locale: locale)
+        if days <= 0 { return String(localized: "today \(hm)") }
+        if days == 1 { return String(localized: "tomorrow \(hm)") }
+        return dayMonthTime(r, locale: locale)
     }
 
     /// Etiket satırının sağı: `Limit bugün 20:58`, `Limit doldu`, `~%3 kalır`, `Sıfırlanırken ~%64 kalır`; nil = yazı yok.
     public static func meterNote(_ m: MeterState, now: Date, relative: Bool) -> String? {
         switch m {
-        case .spent: return "Limit doldu"
+        case .spent: return String(localized: "Limit reached")
         case .runningOut(let eta?, _):
-            guard let w = formatWhen(eta, now: now, relative: relative) else { return "Limit yakında" }
-            return relative ? "Limit \(w) sonra" : "Limit \(w)"
+            guard let w = formatWhen(eta, now: now, relative: relative) else { return String(localized: "Runs out soon") }
+            return relative ? String(localized: "Runs out in \(w)") : String(localized: "Runs out \(w)")
         case .runningOut(nil, _): return nil
-        case .closeToLimit(let spare, _): return "~%\(spare) kalır"
-        case .healthy(let v): return "Sıfırlanırken ~%\(max(0, 100 - v)) kalır"
+        case .closeToLimit(let spare, _): return String(localized: "~\(LocalizedFormat.percent(spare)) left")
+        case .healthy(let v): return String(localized: "~\(LocalizedFormat.percent(max(0, 100 - v))) left at reset")
         case .level: return nil
         }
     }
@@ -744,27 +738,31 @@ public enum AIUsage {
     /// Üzerine gelince ipucu (OpenUsage `MeterState.tooltip`).
     public static func meterTooltip(_ m: MeterState) -> String? {
         switch m {
-        case .spent: return "Limit doldu"
-        case .healthy(let v): return "Sıfırlanırken ~%\(max(0, 100 - v)) kalır"
-        case .closeToLimit(_, let v): return "Sıfırlanırken ~%\(v) kullanılmış olur"
+        case .spent: return String(localized: "Limit reached")
+        case .healthy(let v): return String(localized: "~\(LocalizedFormat.percent(max(0, 100 - v))) left at reset")
+        case .closeToLimit(_, let v): return String(localized: "~\(LocalizedFormat.percent(v)) used at reset")
         case .runningOut(_, let v):
-            return v > 100 ? "Sıfırlanırken limit ~%\(max(1, v - 100)) aşılır" : "Sıfırlanırken ~%100 kullanılmış olur"
+            return v > 100 ? String(localized: "Limit exceeded by ~\(LocalizedFormat.percent(max(1, v - 100))) at reset")
+                : String(localized: "~\(LocalizedFormat.percent(100)) used at reset")
         case .level: return nil
         }
     }
 
     /// Alt satırın sağı: `Sıfırlanma yarın 00:20` / `Sıfırlanmaya 4 sa 45 dk` / `Yakında sıfırlanır` / `Başlamadı`.
-    public static func resetLabel(_ w: Window, now: Date, relative: Bool, notStarted: Bool) -> String? {
-        if notStarted { return "Başlamadı" }
+    /// `compact` replaces the reset word with `↻` for narrow columns.
+    public static func resetLabel(_ w: Window, now: Date, relative: Bool, notStarted: Bool, compact: Bool = false) -> String? {
+        if notStarted { return String(localized: "Not started") }
         guard let r = w.resetsAt else { return nil }
-        guard let when = formatWhen(r, now: now, relative: relative) else { return "Yakında sıfırlanır" }
-        return relative ? "Sıfırlanmaya \(when)" : "Sıfırlanma \(when)"
+        guard let when = formatWhen(r, now: now, relative: relative) else { return String(localized: "Resets soon") }
+        if compact { return "↻ \(when)" }
+        return relative ? String(localized: "Resets in \(when)") : String(localized: "Resets \(when)")
     }
 
     /// Menü çubuğu ipucu eki: `· 5 saat limit bugün 20:58`; dolacak değilse nil.
     public static func meterTooltipSuffix(_ m: MeterState, name: String, now: Date) -> String? {
         guard case .runningOut(let eta, _) = m else { return nil }
-        return " · \(name) limit \(eta.flatMap { formatWhen($0, now: now, relative: false) } ?? "yakında")"
+        let when = eta.flatMap { formatWhen($0, now: now, relative: false) } ?? String(localized: "soon")
+        return " · " + String(localized: "\(name) limit runs out \(when)")
     }
 
 
@@ -1038,29 +1036,27 @@ public enum AIUsage {
 
     // MARK: Biçimlendirme
 
-    /// `1,23 milyar`, `345,6 milyon`, `12,3 bin`, `850` (Türkçe ondalık virgülü).
-    public static func formatTokens(_ n: Int) -> String {
-        func f(_ v: Double, _ unit: String) -> String {
+    /// `1.23B`, `345.6M`, `12.3K`, `850`; digits follow the user's number format.
+    public static func formatTokens(_ n: Int, locale: Locale = .current) -> String {
+        func f(_ v: Double) -> String {
             let digits = v >= 100 ? 0 : v >= 10 ? 1 : 2
-            return String(format: "%.\(digits)f", v).replacingOccurrences(of: ".", with: ",") + " " + unit
+            return v.formatted(.number.precision(.fractionLength(digits)).grouping(.never).locale(locale))
         }
         let v = Double(n)
-        if v >= 1e9 { return f(v / 1e9, "milyar") }
-        if v >= 1e6 { return f(v / 1e6, "milyon") }
-        if v >= 1e4 { return f(v / 1e3, "bin") }
+        if v >= 1e9 { return String(localized: "\(f(v / 1e9))B") }
+        if v >= 1e6 { return String(localized: "\(f(v / 1e6))M") }
+        if v >= 1e4 { return String(localized: "\(f(v / 1e3))K") }
         return String(n)
     }
 
-    /// `25 Eyl – 25 Eki` (yerel saatle gün; ek yok).
-    public static func formatPeriod(_ p: BillingPeriod) -> String {
-        let cal = Calendar.current
-        func day(_ d: Date) -> String { "\(cal.component(.day, from: d)) \(shortMonth(cal.component(.month, from: d)))" }
-        return "\(day(p.start)) – \(day(p.end))"
+    /// `Sep 25 – Oct 25` / `25 Eyl – 25 Eki` (local day, no year).
+    public static func formatPeriod(_ p: BillingPeriod, locale: Locale = .current) -> String {
+        let style = Date.FormatStyle(locale: locale).day().month(.abbreviated)
+        return "\(p.start.formatted(style)) – \(p.end.formatted(style))"
     }
 
     public static func tokenBreakdown(_ c: TokenCounts) -> String {
-        "Girdi \(formatTokens(c.input)) · Çıktı \(formatTokens(c.output)) · "
-            + "Önbellek yazma \(formatTokens(c.cacheWrite)) · Önbellek okuma \(formatTokens(c.cacheRead))"
+        String(localized: "Input \(formatTokens(c.input)) · Output \(formatTokens(c.output)) · Cache write \(formatTokens(c.cacheWrite)) · Cache read \(formatTokens(c.cacheRead))")
     }
 
 }

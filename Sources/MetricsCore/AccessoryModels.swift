@@ -4,9 +4,17 @@ import CoreFoundation
 public enum BluetoothPower: String, Sendable { case on, off, unknown }
 public enum AccessoryConnection: String, Sendable { case connected, disconnected, unknown }
 public struct AccessoryBattery: Sendable, Equatable {
+    /// Stable identifier: `main`, `left`, `right` or `case`.
     public let component: String
     public let percent: Int
     public var charging: Bool? = nil
+    public var label: String {
+        switch component {
+        case "main": String(localized: "Main"); case "left": String(localized: "Left")
+        case "right": String(localized: "Right"); case "case": String(localized: "Case")
+        default: component
+        }
+    }
 }
 public struct BluetoothAccessory: Sendable, Identifiable {
     public let id: String
@@ -123,18 +131,18 @@ enum BluetoothProfileParser {
                         guard let fields = value as? [String: Any] else { throw ParseError.invalidStructure }
                         let id = identity(fields["device_address"]).map { "bt:" + $0 } ?? "unknown:\(ci):\(group):\(ei):\(name.prefix(120))"
                         let connected = group == "device_connected" && states.last != .off
-                        let batteries = [("Genel", "device_batteryLevelMain"), ("Genel", "device_batteryLevel"), ("Sol", "device_batteryLevelLeft"), ("Sağ", "device_batteryLevelRight"), ("Kutu", "device_batteryLevelCase")]
+                        let batteries = [("main", "device_batteryLevelMain"), ("main", "device_batteryLevel"), ("left", "device_batteryLevelLeft"), ("right", "device_batteryLevelRight"), ("case", "device_batteryLevelCase")]
                         var reported: [AccessoryBattery] = []
                         for (label, key) in batteries {
-                            if let p = percent(fields[key]), !reported.contains(where: { $0.component == label }) { reported.append(.init(component: label, percent: p, charging: label == "Kutu" ? charging(fields["device_batteryIsChargingCase"]) : charging(fields["device_isCharging"] ?? fields["device_batteryIsCharging"]))) }
+                            if let p = percent(fields[key]), !reported.contains(where: { $0.component == label }) { reported.append(.init(component: label, percent: p, charging: label == "case" ? charging(fields["device_batteryIsChargingCase"]) : charging(fields["device_isCharging"] ?? fields["device_batteryIsCharging"]))) }
                         }
                         let vendor = (fields["device_vendorID"] as? String)?.lowercased()
                         let logitech = name.lowercased().contains("logitech") || name.lowercased().contains("mx ") || vendor == "0x046d" || (fields["device_vendorID"] as? NSNumber)?.intValue == 0x046d
                         if !connected { discarded += reported.count }
-                        let row = BluetoothAccessory(id: id, name: AccessoryMath.safeName(name, fallback: "Bluetooth aksesuarı"),
-                            kind: AccessoryMath.safeName(fields["device_minorType"] as? String ?? "", fallback: "Tür bildirilmedi"),
+                        let row = BluetoothAccessory(id: id, name: AccessoryMath.safeName(name, fallback: String(localized: "Bluetooth accessory")),
+                            kind: AccessoryMath.safeName(fields["device_minorType"] as? String ?? "", fallback: String(localized: "Type not reported")),
                             connection: connected ? .connected : .disconnected, reportedBatteries: connected && !logitech ? reported : [],
-                            batteryLimitation: logitech ? "Logitech için doğrulanmış HID++ kaynağı gerekli" : nil, reportedCharging: connected ? charging(fields["device_isCharging"] ?? fields["device_batteryIsCharging"]) : nil)
+                            batteryLimitation: logitech ? String(localized: "Logitech needs a verified HID++ source") : nil, reportedCharging: connected ? charging(fields["device_isCharging"] ?? fields["device_batteryIsCharging"]) : nil)
                         if let old = devices[id], old.connection == .disconnected { continue }
                         if devices[id] == nil && devices.count >= 64 { truncated = true; continue }
                         devices[id] = row
@@ -146,7 +154,7 @@ enum BluetoothProfileParser {
         return BluetoothSnapshot(date: date, power: power, accessories: devices.values.sorted {
             if $0.connection != $1.connection { return $0.connection == .connected }
             return $0.name == $1.name ? $0.id < $1.id : $0.name.localizedStandardCompare($1.name) == .orderedAscending
-        }, status: "macOS Bluetooth envanteri · 30 saniyede bir", available: true, truncated: truncated,
+        }, status: String(localized: "macOS Bluetooth inventory · every 30 seconds"), available: true, truncated: truncated,
             discardedOfflineBatteryCount: discarded, collectionMilliseconds: milliseconds)
     }
 }

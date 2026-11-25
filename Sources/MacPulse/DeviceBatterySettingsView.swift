@@ -4,11 +4,11 @@ import TelemetryBridge
 import MetricsCore
 
 extension PanelTheme {
-    var title: String { switch self { case .automatic: "Sistem"; case .light: "Açık"; case .dark: "Koyu" } }
+    var title: String { switch self { case .automatic: String(localized: "System"); case .light: String(localized: "Light"); case .dark: String(localized: "Dark") } }
     var colorScheme: ColorScheme? { switch self { case .automatic: nil; case .light: .light; case .dark: .dark } }
 }
 extension PanelDensity {
-    var title: String { self == .compact ? "Kompakt" : "Rahat" }
+    var title: String { self == .compact ? String(localized: "Compact") : String(localized: "Comfortable") }
 }
 
 enum ConnectionSettings {
@@ -38,10 +38,10 @@ struct DeviceBatterySettingsView: View {
 
     var body: some View {
         TabView(selection: $store.settingsTab) {
-            general.tabItem { Label("Genel", systemImage: "gearshape") }.tag("general")
-            devices.tabItem { Label("Cihazlar", systemImage: "laptopcomputer.and.iphone") }.tag("devices")
-            appearance.tabItem { Label("Görünüm", systemImage: "paintpalette") }.tag("appearance")
-            notifications.tabItem { Label("Bildirimler", systemImage: "bell") }.tag("notifications")
+            general.tabItem { Label("General", systemImage: "gearshape") }.tag("general")
+            devices.tabItem { Label("Devices", systemImage: "laptopcomputer.and.iphone") }.tag("devices")
+            appearance.tabItem { Label("Appearance", systemImage: "paintpalette") }.tag("appearance")
+            notifications.tabItem { Label("Notifications", systemImage: "bell") }.tag("notifications")
         }
         .padding(12)
         .disabled(store.isolated)
@@ -51,38 +51,38 @@ struct DeviceBatterySettingsView: View {
     private var general: some View {
         Form {
             Section("MacPulse") {
-                Button("MacPulse tercihleri ve giriş öğesi") { openSettings() }
-                Toggle("iPhone, iPad ve bağlı aksesuarları oku", isOn: $store.includeMobile)
-                Toggle("AirPods ve kutusunu grupla", isOn: $store.preferences.groupAirPods)
-                Toggle("Düşük pili bağlı cihazlarda üstte göster", isOn: $store.preferences.lowBatteryFirst)
-                Text("Panel açıkken 15 sn, arka planda 60 sn arayla sorgulanır. Yanıt süresi eklenebilir.")
+                Button("MacPulse settings and login item") { openSettings() }
+                Toggle("Read iPhone, iPad and connected accessories", isOn: $store.includeMobile)
+                Toggle("Group AirPods with their case", isOn: $store.preferences.groupAirPods)
+                Toggle("Show low battery first among connected devices", isOn: $store.preferences.lowBatteryFirst)
+                Text("Queried every 15 s while the panel is open, every 60 s in the background. Response time may add to this.")
                     .font(.caption).foregroundStyle(.secondary)
             }
-            Section("Bağlantılar") {
-                Text("iPhone/iPad’i ilk kullanımda kabloyla bağlayıp Güven’i seç. Wi‑Fi eşzamanlama açıkken aynı ağdan okunabilir. Logitech için Giriş İzleme gerekir.")
+            Section("Connections") {
+                Text("Connect your iPhone/iPad with a cable the first time and choose Trust. With Wi‑Fi sync on, it can be read over the same network. Logitech needs Input Monitoring.")
                     .font(.callout).fixedSize(horizontal: false, vertical: true)
                 HStack {
-                    Button("Kurulum rehberi") {
-                        if let url = Bundle.main.url(forResource: "Kurulum", withExtension: "html") { NSWorkspace.shared.open(url) }
+                    Button("Setup guide") {
+                        if let url = Bundle.main.url(forResource: "Setup", withExtension: "html") { NSWorkspace.shared.open(url) }
                     }
-                    Button("Bluetooth ayarları") { ConnectionSettings.open(store.devices.first { $0.source == .bluetooth }) }
-                    Button("Giriş İzleme") {
+                    Button("Bluetooth settings") { ConnectionSettings.open(store.devices.first { $0.source == .bluetooth }) }
+                    Button("Input Monitoring") {
                         _ = pb_request_hid_access()
                         NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ListenEvent")!)
                     }
                 }
             }
             if !store.issues.isEmpty {
-                Section("Bağlantı durumu") {
+                Section("Connection status") {
                     ForEach(store.issues, id: \.self) { Text($0).font(.caption).foregroundStyle(.secondary) }
                 }
             }
             Section {
                 HStack {
-                    Button(store.isRefreshing ? "Yenileniyor…" : "Şimdi yenile") { store.refresh() }.disabled(store.isRefreshing)
+                    Button(store.isRefreshing ? "Refreshing…" : "Refresh now") { store.refresh() }.disabled(store.isRefreshing)
                     Spacer()
-                    Button("Son ölçümleri temizle") { store.forgetOffline() }
-                    if store.canUndoForget { Button("Geri al") { store.undoForgetOffline() } }
+                    Button("Clear last readings") { store.forgetOffline() }
+                    if store.canUndoForget { Button("Undo") { store.undoForgetOffline() } }
                 }
             }
         }.formStyle(.grouped)
@@ -90,54 +90,54 @@ struct DeviceBatterySettingsView: View {
     private var appearance: some View {
         Form {
             Section("Panel") {
-                Picker("Görünüm", selection: $mainPreferences.theme) {
+                Picker("Appearance", selection: $mainPreferences.theme) {
                     ForEach(MonitorTheme.allCases, id: \.self) { Text($0.label).tag($0) }
                 }.pickerStyle(.segmented)
-                Picker("Yerleşim", selection: $store.preferences.density) {
+                Picker("Layout", selection: $store.preferences.density) {
                     ForEach(PanelDensity.allCases, id: \.self) { Text($0.title).tag($0) }
                 }.pickerStyle(.segmented)
                 VStack(alignment: .leading, spacing: 6) {
-                    Text("Menü panelinin yüzey yoğunluğu")
-                    Slider(value: $store.preferences.glassDensity, in: 0...0.65).accessibilityLabel("Menü panelinin yüzey yoğunluğu")
-                    HStack { Text("Daha saydam"); Spacer(); Text("Daha yoğun") }.font(.caption).foregroundStyle(.secondary)
+                    Text("Menu panel surface density")
+                    Slider(value: $store.preferences.glassDensity, in: 0...0.65).accessibilityLabel("Menu panel surface density")
+                    HStack { Text("More transparent"); Spacer(); Text("More solid") }.font(.caption).foregroundStyle(.secondary)
                 }
             }
-            Section("Menü çubuğu") {
-                Text("Her cihazı ayrı widget olarak ekleyip sıralayabilirsin. Pil simgesi, yüzde veya ikisini seç.").font(.callout)
-                Button("Widget'ları düzenle") { MonitorStore.shared.showWidgets() }
-                Text("Seçilen cihaz çevrimdışıysa yüzde yerine — görünür. Eski ölçüm güncelmiş gibi gösterilmez.")
+            Section("Menu bar") {
+                Text("Add each device as its own widget and reorder them. Choose a battery icon, a percentage or both.").font(.callout)
+                Button("Edit widgets") { MonitorStore.shared.showWidgets() }
+                Text("If the selected device is offline, — appears instead of a percentage. An old reading is never shown as current.")
                     .font(.caption).foregroundStyle(.secondary)
             }
-            Section("Pil geçmişi") {
-                Text("Cihaz satırına tıklayarak pil geçmişini aç. 6 saat, 24 saat veya 7 gün seç; Veriye odaklan ile ölçümlere yakınlaş. Gerçek ölçümler yalnızca bu Mac’te saklanır; veri alınamayan aralıklar grafikte boş bırakılır.")
+            Section("Battery history") {
+                Text("Click a device row to open its battery history. Pick 6 hours, 24 hours or 7 days; use Focus on data to zoom in on readings. Real readings are stored only on this Mac; ranges without data stay empty in the chart.")
                     .font(.callout).fixedSize(horizontal: false, vertical: true)
             }
         }.formStyle(.grouped)
     }
     private var notifications: some View {
         Form {
-            Section("Pil uyarıları") {
-                Toggle("Bildirimleri etkinleştir", isOn: $store.preferences.notificationsEnabled)
-                Picker("Düşük pil eşiği", selection: $store.preferences.lowThreshold) {
-                    ForEach([10, 15, 20, 25, 30], id: \.self) { Text("%\($0)").tag($0) }
+            Section("Battery alerts") {
+                Toggle("Enable notifications", isOn: $store.preferences.notificationsEnabled)
+                Picker("Low battery threshold", selection: $store.preferences.lowThreshold) {
+                    ForEach([10, 15, 20, 25, 30], id: \.self) { Text(LocalizedFormat.percent($0)).tag($0) }
                 }.disabled(!store.preferences.notificationsEnabled)
-                Picker("Kritik pil eşiği", selection: $store.preferences.criticalThreshold) {
-                    ForEach([5, 10], id: \.self) { Text("%\($0)").tag($0) }
+                Picker("Critical battery threshold", selection: $store.preferences.criticalThreshold) {
+                    ForEach([5, 10], id: \.self) { Text(LocalizedFormat.percent($0)).tag($0) }
                 }.disabled(!store.preferences.notificationsEnabled)
-                Toggle("Şarj tamamlandığında bildir", isOn: $store.preferences.notifyFullyCharged)
-                Toggle("Bildirim sesi", isOn: $store.preferences.notificationSound)
-                Text("Uyarılar cihaz ve eşik başına bir kez gönderilir; pil yeterince yükselince yeniden hazır olur. Çevrimdışı, gizli veya eski ölçümler uyarı oluşturmaz.")
+                Toggle("Notify when charging completes", isOn: $store.preferences.notifyFullyCharged)
+                Toggle("Notification sound", isOn: $store.preferences.notificationSound)
+                Text("Alerts are sent once per device and threshold, and re-arm once the battery has charged enough. Offline, hidden or old readings never trigger alerts.")
                     .font(.caption).foregroundStyle(.secondary)
             }
-            Section("Sistem izni") {
-                LabeledContent("Durum", value: store.notificationStatus)
+            Section("System permission") {
+                LabeledContent("Status", value: store.notificationStatus)
                 HStack {
-                    Button("İzin iste") { store.requestNotifications() }.disabled(!store.preferences.notificationsEnabled)
-                    Button("Bildirim ayarları") { ConnectionSettings.notifications() }
+                    Button("Request permission") { store.requestNotifications() }.disabled(!store.preferences.notificationsEnabled)
+                    Button("Notification settings") { ConnectionSettings.notifications() }
                     Spacer()
-                    Button("Test bildirimi") { store.testNotification() }.disabled(!store.preferences.notificationsEnabled)
+                    Button("Test notification") { store.testNotification() }.disabled(!store.preferences.notificationsEnabled)
                 }
-                Text("Odak modu ve macOS bildirim ayarları banner’ın görünmesini etkileyebilir. Cihazlar sekmesinde her cihazın uyarısını ayrıca kapatabilirsin.")
+                Text("Focus modes and macOS notification settings can affect whether the banner appears. You can turn off alerts for each device separately in the Devices tab.")
                     .font(.caption).foregroundStyle(.secondary)
             }
         }.formStyle(.grouped).onAppear { store.refreshNotificationPermission() }
@@ -145,7 +145,7 @@ struct DeviceBatterySettingsView: View {
     private var devices: some View {
         HStack(spacing: 0) {
             VStack(alignment: .leading, spacing: 8) {
-                Text("Cihazlarını düzenle").font(.headline).padding(.horizontal, 10)
+                Text("Edit your devices").font(.headline).padding(.horizontal, 10)
                 List(selection: $store.selectedSettingsDevice) {
                     ForEach(store.managementDevices) { device in
                         HStack(spacing: 6) {
@@ -162,14 +162,14 @@ struct DeviceBatterySettingsView: View {
                         store.preferences.deviceOrder = order
                     }
                 }
-                Text("Sıralamak için sürükle. Favoriler ve düşük pil önceliği panelde bu sıranın önüne geçer.")
+                Text("Drag to reorder. Favorites and low-battery priority come before this order in the panel.")
                     .font(.caption).foregroundStyle(.secondary).padding(.horizontal, 10)
             }.frame(width: 225)
             Divider().padding(.horizontal, 8)
             if let device = store.devices.first(where: { $0.id == store.selectedSettingsDevice }) {
                 deviceEditor(device)
             } else {
-                ContentUnavailableView("Bir cihaz seç", systemImage: "cursorarrow.click", description: Text("Adını, sırasını ve pil uyarılarını burada düzenle."))
+                ContentUnavailableView("Select a device", systemImage: "cursorarrow.click", description: Text("Edit its name, order and battery alerts here."))
                     .frame(maxWidth: .infinity)
             }
         }
@@ -182,27 +182,27 @@ struct DeviceBatterySettingsView: View {
     private func deviceEditor(_ device: BatteryDevice) -> some View {
         Form {
             Section("\(store.name(device))") {
-                TextField("Görünen ad", text: option(\.alias, for: device.id), prompt: Text(device.name))
-                Text("Asıl ad: \(device.name)").font(.caption).foregroundStyle(.secondary)
-                Toggle("Favori · üstte göster", isOn: option(\.favorite, for: device.id))
-                Toggle("Panelde gizle", isOn: option(\.hidden, for: device.id))
+                TextField("Display name", text: option(\.alias, for: device.id), prompt: Text(device.name))
+                Text("Original name: \(device.name)").font(.caption).foregroundStyle(.secondary)
+                Toggle("Favorite · show at top", isOn: option(\.favorite, for: device.id))
+                Toggle("Hide in panel", isOn: option(\.hidden, for: device.id))
                 HStack {
-                    Button { store.moveDevice(device.id, by: -1) } label: { Label("Yukarı", systemImage: "arrow.up") }
-                    Button { store.moveDevice(device.id, by: 1) } label: { Label("Aşağı", systemImage: "arrow.down") }
+                    Button { store.moveDevice(device.id, by: -1) } label: { Label("Up", systemImage: "arrow.up") }
+                    Button { store.moveDevice(device.id, by: 1) } label: { Label("Down", systemImage: "arrow.down") }
                 }
             }
-            Section("Pil uyarısı") {
-                Toggle("Bu cihaz için bildir", isOn: option(\.notifications, for: device.id))
-                Picker("Düşük pil", selection: Binding(get: { store.preferences.options(for: device.id).lowThreshold ?? 0 }, set: { value in store.setOptions(device.id) { $0.lowThreshold = value == 0 ? nil : value } })) {
-                    Text("Genel eşik").tag(0)
-                    ForEach([10, 15, 20, 25, 30], id: \.self) { Text("%\($0)").tag($0) }
+            Section("Battery alert") {
+                Toggle("Notify for this device", isOn: option(\.notifications, for: device.id))
+                Picker("Low battery", selection: Binding(get: { store.preferences.options(for: device.id).lowThreshold ?? 0 }, set: { value in store.setOptions(device.id) { $0.lowThreshold = value == 0 ? nil : value } })) {
+                    Text("Global threshold").tag(0)
+                    ForEach([10, 15, 20, 25, 30], id: \.self) { Text(LocalizedFormat.percent($0)).tag($0) }
                 }
             }
-            Section("Ölçüm") {
-                LabeledContent("Bağlantı", value: device.connection?.label ?? "Henüz doğrulanmadı")
-                LabeledContent("Durum", value: device.isLive() ? "Bağlı" : "Çevrimdışı")
-                Button("Pil geçmişini aç") { store.openHistory?(device.id) }
-                if device.source != .mac { Button("Bağlantı ayarları") { ConnectionSettings.open(device) } }
+            Section("Reading") {
+                LabeledContent("Connection", value: device.connection?.label ?? String(localized: "Not verified yet"))
+                LabeledContent("Status", value: device.isLive() ? String(localized: "Connected") : String(localized: "Offline"))
+                Button("Open battery history") { store.openHistory?(device.id) }
+                if device.source != .mac { Button("Connection settings") { ConnectionSettings.open(device) } }
             }
         }.formStyle(.grouped).frame(maxWidth: .infinity)
     }

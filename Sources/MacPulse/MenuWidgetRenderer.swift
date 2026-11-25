@@ -35,8 +35,10 @@ import MetricsCore
                      color: stale ? .secondaryLabelColor : w.value.pct >= 90 ? .systemRed : w.value.pct >= 70 ? .systemOrange : .systemGreen)
                 }
                 let danger = !stale && windows.contains { w in if case .runningOut = w.meter { return w.value.known }; return false }
-                let details = windows.isEmpty ? "Seçilen limit için veri yok" : windows.map { w in
-                    "\(w.label): \(w.value.known ? "%\(widget.showsLeft ? 100 - w.value.pct : w.value.pct) \(widget.showsLeft ? "kaldı" : "kullanıldı")" : "veri bekleniyor")"
+                let details = windows.isEmpty ? String(localized: "No data for the selected limit") : windows.map { w -> String in
+                    guard w.value.known else { return "\(w.label): " + String(localized: "waiting for data") }
+                    let pct = LocalizedFormat.percent(widget.showsLeft ? 100 - w.value.pct : w.value.pct)
+                    return "\(w.label): " + (widget.showsLeft ? String(localized: "\(pct) left") : String(localized: "\(pct) used"))
                 }.joined(separator: ", ")
                 // A lead mark identifies each contiguous Claude group; account numbers stay colored.
                 return Segment(badge: widget.kind == .claude ? "\(widget.account)" : "", text: "",
@@ -45,19 +47,19 @@ import MetricsCore
                                lead: widget.kind == .claude && (index == 0 || widgets[index - 1].kind != .claude) ? .claude : nil,
                                isLimit: true, values: bars.map(\.pct), barColors: bars.map(\.color),
                                showBars: widget.style != .percent, showPercent: widget.style != .bars,
-                               stale: stale, danger: danger, description: label + " · " + details + (stale ? " · Eski/veri yok" : ""))
+                               stale: stale, danger: danger, description: label + " · " + details + (stale ? " · " + String(localized: "Stale/no data") : ""))
             }
             if widget.kind.isBattery {
                 let device = store.deviceBatteries.devices.first { $0.id == (widget.kind == .battery ? "mac:internal" : widget.deviceID) }
                 let live = !store.paused && !store.deviceBatteries.isPaused && device?.isLive(at: store.deviceBatteries.now) == true
                 let level = live ? device?.displayLevel(at: store.deviceBatteries.now) : nil
-                let value = level.map { (device?.approximate == true ? "≈" : "") + "\($0)%" } ?? "—"
-                let name = widget.kind == .battery ? "Pil" : device.map { store.deviceBatteries.name($0) } ?? "Cihaz pili"
+                let value = level.map { (device?.approximate == true ? "≈" : "") + LocalizedFormat.percent($0) } ?? "—"
+                let name = widget.kind == .battery ? String(localized: "Battery") : device.map { store.deviceBatteries.name($0) } ?? String(localized: "Device battery")
                 let charging = live && level != nil && device?.isCharging == true
                 return Segment(badge: widget.kind == .battery ? "B" : String(name.prefix(10)), compactBadge: widget.kind == .battery ? "B" : String(name.prefix(3)), text: widget.style == .bars ? "" : value,
                                color: level == nil ? .secondaryLabelColor : charging ? .systemGreen : (level! <= 20 ? .systemRed : level! <= 40 ? .systemOrange : .systemGreen),
                                battery: widget.style != .percent, batteryLevel: level, charging: charging,
-                               description: name + " · " + value + (live ? charging ? " · Şarj oluyor" : "" : " · Son ölçüm/çevrimdışı"))
+                               description: name + " · " + value + (live ? charging ? " · " + String(localized: "Charging") : "" : " · " + String(localized: "Last reading/offline")))
             }
             let badge: String, value: String, color: NSColor
             switch widget.kind {
@@ -66,7 +68,7 @@ import MetricsCore
             case .memory: badge = "RAM"; value = MetricFormat.percent(s?.memory?.usedPercent); color = .systemPurple
             case .network: badge = "↓"; value = MetricFormat.rate(s?.network?.incomingRate); color = .systemTeal
             case .disk: badge = "D"; value = MetricFormat.percent(s?.disk?.usedPercent); color = .systemOrange
-            case .battery: badge = "B"; value = s?.battery?.present == false ? "—" : s?.battery?.percent.map { "\($0)%" } ?? "—"; color = .systemGreen
+            case .battery: badge = "B"; value = s?.battery?.present == false ? "—" : MetricFormat.percent(s?.battery?.percent); color = .systemGreen
             case .openRouter:
                 badge = "OR"; value = store.usage.credit?.credit.map { AIUsage.formatUSD($0.remaining) } ?? "—"; color = .systemTeal
             case .claude, .codex, .deviceBattery: badge = ""; value = "—"; color = .secondaryLabelColor
@@ -77,7 +79,7 @@ import MetricsCore
     }
     static func description(widgets: [MenuWidget], store: MonitorStore) -> String {
         let result = segments(widgets: widgets, store: store).map(\.description).joined(separator: " · ")
-        return result.isEmpty ? "MacPulse simgesi" : result
+        return result.isEmpty ? String(localized: "MacPulse icon") : result
     }
     static var widthBudget: CGFloat {
         let screen = NSScreen.main

@@ -15,7 +15,7 @@ struct BluetoothSampler {
         if code == 0, Int(length) < bytes.count,
             let parsed = try? BluetoothProfileParser.parse(bytes.withUnsafeBytes { Data($0.prefix(Int(length))) }, date: date, milliseconds: ms) { result = parsed }
         else {
-            let status = code == 1 ? "Bluetooth okuması zaman aşımına uğradı" : code == 2 ? "Bluetooth envanteri boyut sınırını aştı" : "Bluetooth envanteri okunamadı"
+            let status = code == 1 ? String(localized: "Bluetooth read timed out") : code == 2 ? String(localized: "Bluetooth inventory exceeded the size limit") : String(localized: "Bluetooth inventory could not be read")
             result = BluetoothSnapshot(date: date, power: .unknown, accessories: [], status: status,
                 available: false, truncated: code == 2, discardedOfflineBatteryCount: 0, collectionMilliseconds: ms)
         }
@@ -33,8 +33,8 @@ struct AudioSampler {
             for var d in entries.prefix(max(0, min(Int(count), entries.count))) {
                 func has(_ mask: UInt32) -> Bool { d.valid_mask & mask != 0 }
                 let name = withUnsafePointer(to: &d.name) { $0.withMemoryRebound(to: CChar.self, capacity: 256) { String(cString: $0) } }
-                readings.append(AudioDeviceReading(id: d.id, name: AccessoryMath.safeName(name, fallback: "Ses cihazı"),
-                    transport: has(32) ? Self.transport(d.transport) : "Bilinmiyor",
+                readings.append(AudioDeviceReading(id: d.id, name: AccessoryMath.safeName(name, fallback: String(localized: "Audio device")),
+                    transport: has(32) ? Self.transport(d.transport) : String(localized: "Unknown"),
                     inputChannels: has(4) ? Int(d.input_channels) : nil, outputChannels: has(8) ? Int(d.output_channels) : nil,
                     running: has(2) ? d.running != 0 : nil, sampleRate: has(16) ? AccessoryMath.sampleRate(d.sample_rate) : nil,
                     inputVolume: has(64) ? AccessoryMath.scalar(d.input_volume) : nil, outputVolume: has(128) ? AccessoryMath.scalar(d.output_volume) : nil,
@@ -51,17 +51,17 @@ struct AudioSampler {
         let bytes: [UInt8] = [UInt8(truncatingIfNeeded: code >> 24), UInt8(truncatingIfNeeded: code >> 16), UInt8(truncatingIfNeeded: code >> 8), UInt8(truncatingIfNeeded: code)]
         let name = String(bytes: bytes, encoding: .ascii) ?? ""
         switch name {
-        case "bltn": return "Dahili"
+        case "bltn": return String(localized: "Built-in")
         case "usb ": return "USB"
         case "blue", "blea": return "Bluetooth"
-        case "virt": return "Sanal"
-        case "grup": return "Birleşik"
-        case "hdmi", "dprt": return "Ekran / HDMI"
+        case "virt": return String(localized: "Virtual")
+        case "grup": return String(localized: "Aggregate")
+        case "hdmi", "dprt": return String(localized: "Display / HDMI")
         case "airp": return "AirPlay"
         case "thun": return "Thunderbolt"
         case "fwre": return "FireWire"
         case "pci ": return "PCI"
-        default: return "Diğer"
+        default: return String(localized: "Other")
         }
     }
 }

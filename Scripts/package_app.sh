@@ -40,6 +40,9 @@ else cp "${BINARIES[0]}" "$APP/Contents/MacOS/$APP_NAME"; fi
 chmod +x "$APP/Contents/MacOS/$APP_NAME"
 python3 Scripts/package_check.py metadata "$APP" "$SIGNING_MODE" "${ARCH_LIST[@]}"
 cp -R "Sources/$APP_NAME/Resources/." "$APP/Contents/Resources/"
+# The String Catalog ships compiled: en/tr .strings and .stringsdict inside the existing lproj folders.
+python3 Scripts/localization.py compile "$APP/Contents/Resources"
+rm "$APP/Contents/Resources/Localizable.xcstrings"
 cp Icon.icns "$APP/Contents/Resources/Icon.icns"
 cp docs/THIRD-PARTY.md "$APP/Contents/Resources/ThirdPartyNotices.md"
 BIN_DIR=$(dirname "${BINARIES[0]}")

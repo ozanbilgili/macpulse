@@ -1,7 +1,13 @@
 import Foundation
 
 public enum ContainerRuntimeState: String, Sendable, Encodable {
-    case available = "Bağlı", notRunning = "Çalışmıyor", noSocket = "Yerel socket bulunamadı", unavailable = "Erişilemiyor"
+    case available, notRunning, noSocket, unavailable
+    public var label: String {
+        switch self {
+        case .available: String(localized: "Connected"); case .notRunning: String(localized: "Not running")
+        case .noSocket: String(localized: "Local socket not found"); case .unavailable: String(localized: "Unreachable")
+        }
+    }
 }
 public struct ContainerPort: Sendable, Encodable {
     public let containerPort: Int
@@ -97,8 +103,8 @@ enum ContainerAPI {
                 guard let value = port["PrivatePort"] as? Int, value > 0, value <= 65535 else { return nil }
                 let host = port["PublicPort"] as? Int
                 let ip = port["IP"] as? String ?? ""
-                let scope = ip.isEmpty ? "arayüz bilinmiyor" : ["127.0.0.1", "::1"].contains(ip) ? "yerel" : ["0.0.0.0", "::"].contains(ip) ? "tüm arayüzler" : "belirli arayüz"
-                let family = ip.isEmpty ? "IP ailesi bilinmiyor" : ip.contains(":") ? "IPv6" : "IPv4"
+                let scope = ip.isEmpty ? String(localized: "interface unknown") : ["127.0.0.1", "::1"].contains(ip) ? String(localized: "local") : ["0.0.0.0", "::"].contains(ip) ? String(localized: "all interfaces") : String(localized: "specific interface")
+                let family = ip.isEmpty ? String(localized: "IP family unknown") : ip.contains(":") ? "IPv6" : "IPv4"
                 return ContainerPort(containerPort: value, hostPort: host.flatMap { $0 > 0 && $0 <= 65535 ? $0 : nil }, protocolName: clipped(port["Type"] as? String ?? "tcp"), scope: scope, family: family)
             }
             return ContainerEntry(id: id, name: clipped(rawName.trimmingCharacters(in: CharacterSet(charactersIn: "/"))),

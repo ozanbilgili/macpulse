@@ -5,65 +5,66 @@ import MetricsCore
 struct QuickPanel: View {
     let store: MonitorStore
     // The quick panel is recreated when reopened, so temporary tab choices never replace its default.
-    @State private var panel = "AI Kullanımı"
+    private enum Tab: Hashable { case mac, usage, batteries }
+    @State private var panel = Tab.usage
     private var s: MetricSnapshot? { store.snapshot }
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
                 Label("MacPulse", systemImage: "waveform.path.ecg").font(.headline).foregroundStyle(Palette.accent)
                 Spacer()
-                Button("Widget'lar") { store.showWidgets() }.buttonStyle(.link).font(.caption)
+                Button("Widgets") { store.showWidgets() }.buttonStyle(.link).font(.caption)
                 Button { store.showSettings() } label: {
                     Image(systemName: "gearshape")
-                }.buttonStyle(.plain).accessibilityLabel("Tercihleri aç")
+                }.buttonStyle(.plain).accessibilityLabel("Open Settings")
             }
             HStack(spacing: 6) {
                 Circle().fill(store.paused ? Palette.disk : Palette.accent).frame(width: 6, height: 6)
-                Text(store.paused ? "Duraklatıldı · son ölçüm gösteriliyor" : "Canlı · \(store.effectiveInterval) saniyede bir")
+                Text(store.paused ? "Paused · showing last reading" : "Live · every \(store.effectiveInterval) seconds")
                     .font(.caption).foregroundStyle(Palette.secondary)
             }
             Picker("Panel", selection: $panel) {
-                Text("Mac").tag("Mac")
-                Text("AI Kullanımı").tag("AI Kullanımı")
-                Text("Piller").tag("Piller")
+                Text("Mac").tag(Tab.mac)
+                Text("AI Usage").tag(Tab.usage)
+                Text("Batteries").tag(Tab.batteries)
             }.pickerStyle(.segmented)
-            if panel == "AI Kullanımı" {
+            if panel == .usage {
                 AIQuickSummary(store: store)
-            } else if panel == "Piller" {
+            } else if panel == .batteries {
                 DeviceBatteryQuickView(store: store)
             } else {
             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
-                PanelMetric(title: "CPU", value: MetricFormat.percent(s?.cpu?.used), detail: "Tüm çekirdekler", icon: "cpu", color: Palette.cpu)
-                PanelMetric(title: "Bellek", value: MetricFormat.bytes(s?.memory?.used, binary: true), detail: s?.memory?.pressure.label ?? "—", icon: "memorychip", color: Palette.memory)
-                PanelMetric(title: "Disk", value: MetricFormat.bytes(s?.disk?.available), detail: "Başlangıç diskinde boş", icon: "internaldrive", color: Palette.disk)
-                PanelMetric(title: "Ağ", value: MetricFormat.rate(s?.network?.incomingRate), detail: "↓ Fiziksel arayüzler", icon: "network", color: Palette.network)
-                PanelMetric(title: "Pil", value: s?.battery?.present == false ? "Pil yok" : s?.battery?.percent.map { "\($0)%" } ?? "—", detail: s?.battery?.stateLabel ?? "—", icon: "battery.100percent", color: Palette.battery)
-                PanelMetric(title: "GPU", value: MetricFormat.percent(s?.hardware?.singleGPUPercent), detail: "Sürücü kullanım sayacı", icon: "square.3.layers.3d", color: Palette.gpu)
+                PanelMetric(title: "CPU", value: MetricFormat.percent(s?.cpu?.used), detail: String(localized: "All cores"), icon: "cpu", color: Palette.cpu)
+                PanelMetric(title: String(localized: "Memory"), value: MetricFormat.bytes(s?.memory?.used, binary: true), detail: s?.memory?.pressure.label ?? "—", icon: "memorychip", color: Palette.memory)
+                PanelMetric(title: "Disk", value: MetricFormat.bytes(s?.disk?.available), detail: String(localized: "Free on startup disk"), icon: "internaldrive", color: Palette.disk)
+                PanelMetric(title: String(localized: "Network"), value: MetricFormat.rate(s?.network?.incomingRate), detail: String(localized: "↓ Physical interfaces"), icon: "network", color: Palette.network)
+                PanelMetric(title: String(localized: "Battery"), value: s?.battery?.present == false ? String(localized: "No battery") : MetricFormat.percent(s?.battery?.percent), detail: s?.battery?.stateLabel ?? "—", icon: "battery.100percent", color: Palette.battery)
+                PanelMetric(title: "GPU", value: MetricFormat.percent(s?.hardware?.singleGPUPercent), detail: String(localized: "Driver utilization counter"), icon: "square.3.layers.3d", color: Palette.gpu)
             }
             if let date = s?.date {
-                Text("Son ölçüm \(date.formatted(date: .omitted, time: .standard))")
+                Text("Last measured \(date.formatted(date: .omitted, time: .standard))")
                     .font(.caption2).monospacedDigit().foregroundStyle(Palette.secondary)
             }
             }
             if store.historyError != nil {
-                Label("Geçmiş kaydı alınamıyor", systemImage: "exclamationmark.circle")
+                Label("History unavailable", systemImage: "exclamationmark.circle")
                     .font(.caption).foregroundStyle(Palette.disk)
             }
             HStack {
-                Button("Ana pencereyi aç") { store.showMain() }
+                Button("Open Main Window") { store.showMain() }
                     .buttonStyle(.borderedProminent).tint(Palette.accent)
                 Spacer()
                 Button { store.paused.toggle() } label: {
                     Image(systemName: store.paused ? "play.fill" : "pause.fill")
-                }.accessibilityLabel(store.paused ? "İzlemeyi sürdür" : "İzlemeyi duraklat")
+                }.accessibilityLabel(store.paused ? "Resume monitoring" : "Pause monitoring")
             }
             Divider()
             HStack {
-                Text("Pencereyi kapatmak izlemeyi durdurmaz.").font(.caption2).foregroundStyle(Palette.secondary)
+                Text("Closing the window doesn't stop monitoring.").font(.caption2).foregroundStyle(Palette.secondary)
                 Spacer()
-                Button("Çıkış") { NSApp.terminate(nil) }.buttonStyle(.plain).font(.caption)
+                Button("Quit") { NSApp.terminate(nil) }.buttonStyle(.plain).font(.caption)
             }
-        }.padding(16).frame(width: panel == "AI Kullanımı" ? 520 : panel == "Piller" ? DeviceBatteryPanelLayout.width(store.deviceBatteries.preferences.density) + 32 : MenuPanelLayout.width).background(Palette.background).foregroundStyle(.primary)
+        }.padding(16).frame(width: panel == .usage ? 520 : panel == .batteries ? DeviceBatteryPanelLayout.width(store.deviceBatteries.preferences.density) + 32 : MenuPanelLayout.width).background(Palette.background).foregroundStyle(.primary)
     }
 }
 

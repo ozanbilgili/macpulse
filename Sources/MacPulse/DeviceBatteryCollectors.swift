@@ -15,15 +15,15 @@ enum DeviceBatteryCollector {
             return merged
         }
         var successful: Set<BatterySource> = logitech.permissionDenied ? [] : [.logitech]
-        var issues = logitech.permissionDenied ? ["Logitech HID++ için MacPulse'a Giriş İzleme izni gerekiyor."] : []
+        var issues = logitech.permissionDenied ? [String(localized: "Logitech HID++ needs Input Monitoring permission for MacPulse.")] : []
         localResult(.init(devices: devices, successfulSources: successful, issues: issues))
         var connections: [PencilConnection] = []
         if includeMobile && !Task.isCancelled {
             if let mobile = MobileCollector.collect() {
                 devices += mobile.devices; connections = mobile.connections
                 if mobile.completed { successful.insert(.mobile) }
-                else { issues.append("Mobil sorgu kısmi; son tamamlanan ölçümler korunuyor.") }
-            } else { issues.append("Mobil pil araçları bulunamadı; bağlantı rehberine bak.") }
+                else { issues.append(String(localized: "Mobile query partial; the last completed readings are kept.")) }
+            } else { issues.append(String(localized: "Mobile battery tools not found; see the connection guide.")) }
         }
         return .init(devices: devices, successfulSources: successful, issues: issues, pencilConnections: connections)
     }

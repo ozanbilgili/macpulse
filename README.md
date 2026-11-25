@@ -172,7 +172,7 @@ Full details are in [docs/PRIVACY.md](docs/PRIVACY.md) (Turkish).
 
 MacPulse is a personal project that I use every day. Please read these before you try it.
 
-- **The UI is in Turkish.** English localization isn't done yet. Contributions are very welcome.
+- **The UI is in English and Turkish.** MacPulse follows your macOS language (Turkish when you prefer Turkish, English otherwise), and numbers, percentages and dates follow your region settings. Some docs are still Turkish-only. New translations are welcome: strings live in `Sources/MacPulse/Resources/Localizable.xcstrings`, and `python3 Scripts/localization.py check` validates them.
 - **It is tested on one machine** (Apple M4 Pro, macOS 27). Intel Macs and older macOS versions are untested.
 - **SMC and IOReport are undocumented Apple interfaces.** Some sensors may read `—` on other hardware, and no fan control or admin helper is included.
 - **AI usage relies on unofficial provider endpoints** used by the official CLIs. They can change without notice, and then the cards show `—` until the app is updated.

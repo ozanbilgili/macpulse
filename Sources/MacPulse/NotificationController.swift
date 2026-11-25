@@ -7,7 +7,7 @@ import MetricsCore
     @ObservationIgnored var onBatteryDevice: ((String) -> Void)?
     var enabled = false
     var requesting = false
-    var status = "Kapalı · uyarılar uygulamada görünür"
+    var status = String(localized: "Off · alerts appear in the app")
     private let preference = "MacPulse.localAlertNotifications"
     private let systemNotificationsAllowed: Bool
     init(systemNotificationsAllowed: Bool = true) {
@@ -20,14 +20,14 @@ import MetricsCore
         guard UserDefaults.standard.bool(forKey: preference) else { return }
         let settings = await UNUserNotificationCenter.current().notificationSettings()
         enabled = settings.authorizationStatus == .authorized
-        status = enabled ? "Sistem bildirimleri açık" : "Sistem izni kapalı · uyarılar uygulamada görünür"
+        status = enabled ? String(localized: "System notifications on") : String(localized: "System permission off · alerts appear in the app")
         UNUserNotificationCenter.current().delegate = self
     }
     func toggle() async {
         guard systemNotificationsAllowed, !requesting else { return }
         if enabled {
             enabled = false; UserDefaults.standard.set(false, forKey: preference)
-            status = "Kapalı · uyarılar uygulamada görünür"; return
+            status = String(localized: "Off · alerts appear in the app"); return
         }
         requesting = true
         defer { requesting = false }
@@ -36,16 +36,16 @@ import MetricsCore
             center.delegate = self
             enabled = try await center.requestAuthorization(options: [.alert])
             UserDefaults.standard.set(enabled, forKey: preference)
-            status = enabled ? "Sistem bildirimleri açık" : "İzin verilmedi · uyarılar uygulamada görünür"
-        } catch { enabled = false; status = "Bildirim izni alınamadı · uyarılar uygulamada görünür" }
+            status = enabled ? String(localized: "System notifications on") : String(localized: "Permission denied · alerts appear in the app")
+        } catch { enabled = false; status = String(localized: "Notification permission couldn't be obtained · alerts appear in the app") }
     }
     func deliver(_ alert: MonitorAlert) async {
         guard enabled else { return }
         let content = UNMutableNotificationContent()
         content.title = alert.kind.title
-        content.body = "\(alert.target) · \(AlertFormat.value(alert))"
+        content.body = "\(alert.displayTarget) · \(AlertFormat.value(alert))"
         do { try await UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: alert.id, content: content, trigger: nil)) }
-        catch { status = "Sistem bildirimi gönderilemedi · uyarı uygulamada kayıtlı" }
+        catch { status = String(localized: "System notification couldn't be sent · alert saved in the app") }
     }
     nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification,
                                             withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
